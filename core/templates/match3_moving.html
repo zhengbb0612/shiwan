@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<title>Collect 3 Playable</title>
+<!-- UAC_META_PLACEHOLDER -->
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#efe3d6;font-family:Arial,"PingFang SC","Microsoft YaHei",sans-serif;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+#app{position:relative;width:min(100vw,calc(100vh * 9 / 16));height:min(100vh,calc(100vw * 16 / 9));aspect-ratio:9/16;background:linear-gradient(180deg,#f6ead9 0%,#efe3d6 60%,#e7d6c2 100%);overflow:hidden;margin:0 auto}
+.topbar{position:absolute;left:0;top:0;right:0;height:7%;background:linear-gradient(180deg,#c4690f,#ad560f);z-index:10;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+.score{position:absolute;left:3%;top:1.6%;background:rgba(255,255,255,.25);color:#fff;padding:9px 18px;border-radius:999px;font-weight:900;font-size:min(4vw,22px);z-index:11;letter-spacing:.5px}
+.cta{position:absolute;right:3%;top:1.3%;background:linear-gradient(180deg,#57b9ff,#2a7fff);color:#fff;border:none;border-radius:999px;padding:10px 22px;font-weight:900;font-size:min(4vw,22px);z-index:11;box-shadow:0 4px 10px rgba(42,127,255,.4);cursor:pointer;animation:ctaPulse 1.4s infinite}
+.cabinets{position:absolute;left:3%;right:3%;top:9%;height:18%;display:flex;justify-content:space-between;z-index:4}
+.cab{position:relative;width:31%;height:100%;border-radius:16px;background:linear-gradient(180deg,#fff3e2,#f0d8b8);box-shadow:0 6px 14px rgba(120,68,29,.22),inset 0 2px 0 rgba(255,255,255,.6);border:3px solid #d8a86e;display:flex;flex-direction:column;overflow:hidden}
+.cab-head{display:none}
+.cab-slots{flex:1;display:flex;align-items:center;justify-content:space-evenly;padding:0 6%}
+.cab-slot{width:28%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:12px;background:rgba(180,130,80,.14);font-size:min(7vw,34px);line-height:1;transition:opacity .14s linear,transform .14s ease}
+.cab-slot img{max-width:96%;max-height:96%;object-fit:contain;filter:drop-shadow(0 3px 3px rgba(0,0,0,.16))}
+.cab-slot.filled{transform:scale(1.06)}
+.cab.highlight{animation:cabPulse 1s infinite}
+.rows-wrap{position:absolute;left:5%;right:5%;top:29%;bottom:14%;overflow:hidden;z-index:2;padding-top:8px}
+.row{position:absolute;left:0;right:0;height:16%;overflow:visible}
+.row.r1{top:1%}.row.r2{top:20.5%}.row.r3{top:40%}.row.r4{top:59.5%}.row.r5{top:79%}
+.track{position:absolute;left:0;top:0;height:100%;display:flex;gap:12px;will-change:transform;transform:translateZ(0);overflow:visible}
+.shelf{position:relative;flex:0 0 168px;height:100%;display:flex;justify-content:space-between;align-items:flex-end;padding:0 8px;overflow:visible}
+.shelf::before{content:"";position:absolute;left:2px;right:2px;bottom:6px;height:16px;border-radius:999px;background:linear-gradient(180deg,#e9c79f 0%,#d7a46d 48%,#b77842 100%);box-shadow:0 2px 0 rgba(120,68,29,.28),inset 0 1px 0 rgba(255,255,255,.35);z-index:1;pointer-events:none}
+.tile-slot{position:relative;flex:0 0 48px;height:100%;display:flex;align-items:flex-end;justify-content:center;padding-bottom:12px;z-index:2;overflow:visible}
+.tile{position:relative;width:100%;height:100%;display:flex;align-items:flex-end;justify-content:center;cursor:pointer;font-size:min(8vw,38px);line-height:1}
+.tile img{width:auto;height:90%;max-width:150%;object-fit:contain;filter:drop-shadow(0 4px 5px rgba(0,0,0,.14))}
+.tile.flash{animation:tap .14s ease}
+.tile.wrong{animation:wrong .26s ease}
+.hand{position:absolute;left:8%;top:40%;font-size:54px;z-index:8;animation:hand 1.2s infinite;pointer-events:none;filter:drop-shadow(0 3px 4px rgba(0,0,0,.3))}
+.hint{position:absolute;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);width:80%;text-align:center;background:#91591f;color:#fff;padding:13px 18px;border-radius:20px;font-weight:900;font-size:min(3.8vw,20px);z-index:9;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.fly{position:absolute;z-index:20;font-size:min(8vw,38px);line-height:1;pointer-events:none;will-change:transform,opacity}
+.fly img{width:42px;height:42px;object-fit:contain}
+.praise{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.6);color:#ff8a2a;font-weight:900;font-size:min(11vw,52px);text-shadow:0 3px 0 #fff,0 6px 14px rgba(0,0,0,.25);z-index:24;opacity:0;pointer-events:none}
+.praise.show{animation:praise 1s ease forwards}
+#overlay{position:absolute;inset:0;background:rgba(20,10,0,.45);display:none;align-items:center;justify-content:center;z-index:30}
+.card{width:78%;background:#fff1e5;border-radius:28px;padding:30px 26px;text-align:center;box-shadow:0 20px 40px rgba(0,0,0,.3)}
+.card h1{margin:0 0 10px;color:#7a4519;font-size:min(11vw,44px)}
+.card p{margin:0 0 20px;color:#8a663d;font-size:min(5vw,22px);font-weight:700;line-height:1.4}
+.bigbtn{border:none;border-radius:999px;background:linear-gradient(180deg,#57b9ff,#2a7fff);color:#fff;padding:16px 38px;font-size:min(6vw,26px);font-weight:900;cursor:pointer;box-shadow:0 6px 14px rgba(42,127,255,.45);animation:ctaPulse 1.4s infinite}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+@keyframes cabPulse{0%,100%{box-shadow:0 6px 14px rgba(120,68,29,.22),inset 0 2px 0 rgba(255,255,255,.6)}50%{box-shadow:0 0 0 4px rgba(255,154,103,.85),0 6px 14px rgba(120,68,29,.22)}}
+@keyframes ctaPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+@keyframes tap{0%{transform:scale(1)}50%{transform:scale(1.16)}100%{transform:scale(1)}}
+@keyframes wrong{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@keyframes hand{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(10px) rotate(-8deg)}}
+@keyframes praise{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}30%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}70%{opacity:1;transform:translate(-50%,-60%) scale(1)}100%{opacity:0;transform:translate(-50%,-90%) scale(.9)}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar"></div>
+  <div class="score">Clears <span id="score">0</span>/<span id="goal">8</span></div>
+  <button class="cta" id="topcta">Play Now</button>
+
+  <div class="cabinets" id="cabinets"></div>
+
+  <div class="rows-wrap" id="rows"></div>
+  <div class="hand" id="hand">👆</div>
+  <div class="hint" id="hint">Tap 3 matching items to fill a cabinet!</div>
+  <div class="praise" id="praise"></div>
+
+  <div id="overlay">
+    <div class="card">
+      <h1 id="ovTitle">Level Clear!</h1>
+      <p id="ovText">Great job! Jump into the full game now.</p>
+      <button class="bigbtn" id="ovBtn">Play Now</button>
+    </div>
+  </div>
+</div>
+<script>
+var CLICK_URL = "STORE_URL_PLACEHOLDER";
+var GOAL = 8;
+// Optional per-type tile images (base64 data URIs) injected by generator; null = emoji fallback.
+var TILE_DATA = /*{{TILE_DATA}}*/null;
+var EMOJI = ['🥤','🥕','🍊','🍅','🍓','🫐','🧴','🍉','🥔'];
+var TYPES = [];
+for (var ti = 0; ti < 9; ti++) TYPES.push('t' + ti);
+
+function tileFace(type){
+  var idx = parseInt(type.slice(1), 10);
+  if (TILE_DATA && TILE_DATA[idx]) {
+    return '<img src="' + TILE_DATA[idx] + '" alt="">';
+  }
+  return EMOJI[idx] || '⭐';
+}
+
+// 5 scrolling rows; cabinets collect the first 3 distinct target types.
+var ROWS = [
+  ['t0','t2','t2','t0','t3','t4','t0','t5','t6','t0','t1','t0','t0','t3','t4'],
+  ['t2','t2','t0','t4','t2','t5','t6','t2','t2','t3','t1','t2','t5','t6','t2'],
+  ['t3','t4','t1','t1','t6','t1','t1','t2','t1','t3','t4','t1','t5','t2','t1'],
+  ['t0','t5','t6','t0','t2','t2','t0','t3','t4','t0','t5','t6','t0','t1','t0'],
+  ['t1','t2','t1','t2','t2','t0','t4','t2','t5','t6','t2','t1','t2','t3','t1']
+];
+
+// ---- Synth SFX (WebAudio, zero embedded bytes) ----
+var actx = null;
+function ac(){ if(!actx){ try{ actx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return actx; }
+function beep(freq, dur, type, vol){
+  var c = ac(); if(!c) return;
+  try {
+    var o = c.createOscillator(), g = c.createGain();
+    o.type = type || 'sine'; o.frequency.value = freq;
+    g.gain.value = vol || 0.18;
+    o.connect(g); g.connect(c.destination);
+    var t = c.currentTime;
+    o.start(t);
+    g.gain.setValueAtTime(g.gain.value, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.stop(t + dur);
+  } catch(e){}
+}
+function sfxTap(){ beep(520, 0.10, 'triangle', 0.14); }
+function sfxFill(){ beep(720, 0.12, 'sine', 0.16); }
+function sfxClear(){ beep(660, 0.10, 'square', 0.16); setTimeout(function(){beep(880,0.12,'square',0.16);},90); setTimeout(function(){beep(1180,0.16,'square',0.16);},190); }
+function sfxWin(){ [523,659,784,1046].forEach(function(f,i){ setTimeout(function(){beep(f,0.22,'triangle',0.2);}, i*140); }); }
+function sfxWrong(){ beep(180, 0.18, 'sawtooth', 0.12); }
+function praiseSay(text){
+  try {
+    if (window.speechSynthesis) {
+      var u = new SpeechSynthesisUtterance(text);
+      u.rate = 1.05; u.pitch = 1.2; u.volume = 0.8;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+    }
+  } catch(e){}
+}
+
+var clears = 0;
+var cabs = [
+  {type:'t0', count:0},
+  {type:'t1', count:0},
+  {type:'t2', count:0}
+];
+var scoreEl = document.getElementById('score');
+var goalEl = document.getElementById('goal');
+var hintEl = document.getElementById('hint');
+var cabsEl = document.getElementById('cabinets');
+var rowsEl = document.getElementById('rows');
+var handEl = document.getElementById('hand');
+var praiseEl = document.getElementById('praise');
+var appEl = document.getElementById('app');
+var PRAISES = ['Great!','Nice!','Perfect!','Combo!','Awesome!'];
+
+goalEl.textContent = GOAL;
+
+  function openStore() {
+    try {
+      if (window.mraid && typeof window.mraid.open === 'function') {
+        window.mraid.open(CLICK_URL);
+        return;
+      }
+    } catch (e) {}
+    try {
+      window.open(CLICK_URL, '_blank', 'noopener');
+      return;
+    } catch (e) {}
+    window.location.href = CLICK_URL;
+  }
+document.getElementById('topcta').onclick = openStore;
+document.getElementById('ovBtn').onclick = openStore;
+
+function renderCabinets(){
+  cabsEl.innerHTML = '';
+  cabs.forEach(function(cab, i){
+    var el = document.createElement('div');
+    el.className = 'cab' + (i === 0 ? ' highlight' : '');
+    var slots = document.createElement('div');
+    slots.className = 'cab-slots';
+    for (var s = 0; s < 3; s++) {
+      var slot = document.createElement('div');
+      slot.className = 'cab-slot' + (s < cab.count ? ' filled' : '');
+      if (s < cab.count) { slot.innerHTML = tileFace(cab.type); }
+      else { slot.style.opacity = '.28'; slot.innerHTML = tileFace(cab.type); }
+      slots.appendChild(slot);
+    }
+    el.appendChild(slots);
+    cabsEl.appendChild(el);
+  });
+}
+
+function renderRows(){
+  rowsEl.innerHTML = '';
+  ROWS.forEach(function(row, ri){
+    var rowEl = document.createElement('div');
+    rowEl.className = 'row r' + (ri + 1);
+    var trackA = document.createElement('div'); trackA.className = 'track';
+    var trackB = document.createElement('div'); trackB.className = 'track';
+
+    function fillTrack(trackNode){
+      for (var i = 0; i < row.length; i += 3) {
+        var shelf = document.createElement('div');
+        shelf.className = 'shelf';
+        for (var localIndex = 0; localIndex < 3; localIndex++) {
+          var globalIndex = i + localIndex;
+          var slot = document.createElement('div');
+          slot.className = 'tile-slot';
+          var type = row[globalIndex];
+          if (type) {
+            var tile = document.createElement('div');
+            tile.className = 'tile';
+            tile.dataset.type = type;
+            tile.dataset.row = ri;
+            tile.dataset.index = globalIndex;
+            tile.innerHTML = tileFace(type);
+            (function(t, r, gi){
+              tile.onclick = function(){ tapTile(t, r, gi, tile); };
+            })(type, ri, globalIndex);
+            slot.appendChild(tile);
+          }
+          shelf.appendChild(slot);
+        }
+        trackNode.appendChild(shelf);
+      }
+    }
+
+    fillTrack(trackA);
+    fillTrack(trackB);
+    rowEl.appendChild(trackA);
+    rowEl.appendChild(trackB);
+    rowsEl.appendChild(rowEl);
+  });
+}
+
+var motionId = 0;
+var motions = [];
+function startRowMotion(){
+  cancelAnimationFrame(motionId);
+  motions.length = 0;
+  var speeds = [0.45, 0.38, 0.5, 0.42, 0.47];
+  var rowNodes = [].slice.call(rowsEl.querySelectorAll('.row'));
+  rowNodes.forEach(function(rowEl, idx){
+    var tracks = rowEl.querySelectorAll('.track');
+    var a = tracks[0], b = tracks[1];
+    var w = a.scrollWidth;
+    var startOffset = 24;
+    a.style.transform = 'translate3d(' + startOffset + 'px,0,0)';
+    b.style.transform = 'translate3d(' + (w + startOffset) + 'px,0,0)';
+    motions.push({a:a, b:b, w:w, x1:startOffset, x2:w + startOffset, s:speeds[idx] || 0.42});
+  });
+  function step(){
+    for (var i = 0; i < motions.length; i++) {
+      var m = motions[i];
+      m.x1 += m.s; m.x2 += m.s;
+      if (m.x1 >= m.w) m.x1 = m.x2 - m.w;
+      if (m.x2 >= m.w) m.x2 = m.x1 - m.w;
+      m.a.style.transform = 'translate3d(' + m.x1 + 'px,0,0)';
+      m.b.style.transform = 'translate3d(' + m.x2 + 'px,0,0)';
+    }
+    motionId = requestAnimationFrame(step);
+  }
+  motionId = requestAnimationFrame(step);
+}
+
+function removeTileEverywhere(rowIndex, itemIndex){
+  var nodes = rowsEl.querySelectorAll('.tile[data-row="' + rowIndex + '"][data-index="' + itemIndex + '"]');
+  [].slice.call(nodes).forEach(function(tile){
+    var slot = tile.parentElement;
+    if (slot) slot.innerHTML = '';
+  });
+}
+
+function flyToCab(fromEl, type, cabIndex){
+  var appRect = appEl.getBoundingClientRect();
+  var fromRect = fromEl.getBoundingClientRect();
+  var cabEl = cabsEl.children[cabIndex];
+  if (!cabEl) return;
+  var toRect = cabEl.getBoundingClientRect();
+  var fly = document.createElement('div');
+  fly.className = 'fly';
+  fly.innerHTML = tileFace(type);
+  var x0 = fromRect.left - appRect.left + fromRect.width / 2;
+  var y0 = fromRect.top - appRect.top + fromRect.height / 2;
+  var x1 = toRect.left - appRect.left + toRect.width / 2;
+  var y1 = toRect.top - appRect.top + toRect.height / 2;
+  fly.style.left = x0 + 'px';
+  fly.style.top = y0 + 'px';
+  fly.style.transform = 'translate(-50%,-50%) scale(1)';
+  fly.style.transition = 'transform .34s cubic-bezier(.45,.05,.3,1), opacity .34s ease';
+  appEl.appendChild(fly);
+  requestAnimationFrame(function(){
+    fly.style.transform = 'translate(-50%,-50%) translate(' + (x1 - x0) + 'px,' + (y1 - y0) + 'px) scale(.6)';
+    fly.style.opacity = '0.4';
+  });
+  setTimeout(function(){ if (fly.parentElement) fly.parentElement.removeChild(fly); }, 360);
+}
+
+function showPraise(){
+  var txt = PRAISES[Math.floor(Math.random() * PRAISES.length)];
+  praiseEl.textContent = txt;
+  praiseEl.classList.remove('show');
+  void praiseEl.offsetWidth;
+  praiseEl.classList.add('show');
+  praiseSay(txt);
+}
+
+var busy = false;
+function tapTile(type, rowIndex, itemIndex, tileEl){
+  if (busy) return;
+  ac();
+  var cabIndex = -1;
+  for (var i = 0; i < cabs.length; i++) {
+    if (cabs[i].type === type && cabs[i].count < 3) { cabIndex = i; break; }
+  }
+  if (cabIndex === -1) {
+    if (tileEl) { tileEl.classList.add('wrong'); setTimeout(function(){ tileEl.classList.remove('wrong'); }, 280); }
+    sfxWrong();
+    hintEl.textContent = 'Tap items that match a cabinet on top!';
+    return;
+  }
+  if (tileEl) {
+    tileEl.classList.add('flash');
+    tileEl.style.pointerEvents = 'none';
+    flyToCab(tileEl, type, cabIndex);
+  }
+  sfxTap();
+  if (Array.isArray(ROWS[rowIndex]) && ROWS[rowIndex][itemIndex] === type) {
+    ROWS[rowIndex][itemIndex] = null;
+  }
+  removeTileEverywhere(rowIndex, itemIndex);
+
+  setTimeout(function(){
+    var cab = cabs[cabIndex];
+    cab.count += 1;
+    sfxFill();
+    renderCabinets();
+    handEl.style.display = 'none';
+    hintEl.textContent = 'Tap 3 matching items to fill a cabinet!';
+
+    if (cab.count === 3) {
+      busy = true;
+      setTimeout(function(){
+        cab.count = 0;
+        sfxClear();
+        showPraise();
+        clears += 1;
+        scoreEl.textContent = clears;
+        // rotate cabinet to a new target type so play continues
+        cab.type = TYPES[(parseInt(cab.type.slice(1), 10) + 3) % TYPES.length];
+        renderCabinets();
+        hintEl.textContent = 'Nice! Keep collecting 3 matching items.';
+        busy = false;
+        if (clears >= GOAL) {
+          setTimeout(win, 280);
+        }
+      }, 110);
+    }
+  }, 130);
+}
+
+function win(){
+  sfxWin();
+  cancelAnimationFrame(motionId);
+  document.getElementById('ovTitle').textContent = 'Level Clear!';
+  document.getElementById('ovText').textContent = 'Great job! Jump into the full game now.';
+  document.getElementById('overlay').style.display = 'flex';
+}
+
+function init(){
+  renderCabinets();
+  renderRows();
+  requestAnimationFrame(function(){ requestAnimationFrame(startRowMotion); });
+}
+init();
+</script>
+</body>
+</html>

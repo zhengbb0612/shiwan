@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<title>Goods Match Playable</title>
+<!-- UAC_META_PLACEHOLDER -->
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#e9dcc8;font-family:Arial,"PingFang SC","Microsoft YaHei",sans-serif;touch-action:none;-webkit-user-select:none;user-select:none}
+#app{position:relative;width:min(100vw,calc(100vh * 9 / 16));height:min(100vh,calc(100vw * 16 / 9));aspect-ratio:9/16;background:linear-gradient(180deg,#fbe9cf 0%,#f0d9b6 50%,#e6c79a 100%);overflow:hidden;margin:0 auto}
+/* top white prompt */
+.toptip{position:absolute;left:50%;top:3%;transform:translateX(-50%);width:90%;text-align:center;color:#fff;font-weight:900;font-size:min(5.4vw,26px);z-index:31;text-shadow:0 2px 4px rgba(120,70,20,.55),0 0 2px rgba(120,70,20,.4);letter-spacing:.3px}
+#stage{position:absolute;left:0;right:0;top:10%;bottom:5%;z-index:2;overflow:hidden}
+/* wooden shelf body: side frames + per-layer planks */
+.shelf-frame{position:absolute;border-radius:10px;background:linear-gradient(180deg,#b9803f,#8a5520);box-shadow:0 8px 16px rgba(70,40,12,.34),inset 0 2px 0 rgba(255,225,180,.45),inset 0 -3px 6px rgba(50,28,8,.4);box-sizing:border-box;z-index:1}
+.shelf-frame::before,.shelf-frame::after{content:"";position:absolute;top:0;bottom:0;width:5%;min-width:7px;background:linear-gradient(90deg,#a06a30,#7a4818);box-shadow:inset 0 0 0 1px rgba(40,22,6,.3)}
+.shelf-frame::before{left:0;border-radius:10px 0 0 10px}
+.shelf-frame::after{right:0;border-radius:0 10px 10px 0}
+/* one horizontal plank (the shelf board a layer of items sits on) */
+.plank{position:absolute;border-radius:4px;background:linear-gradient(180deg,#e7bd84 0%,#cf9a55 55%,#a9742f 100%);box-shadow:0 3px 4px rgba(70,40,12,.4),inset 0 1px 0 rgba(255,240,210,.7);z-index:3}
+.plank::after{content:"";position:absolute;left:0;right:0;top:100%;height:5px;background:linear-gradient(180deg,#7c4d1e,#5e3a14);border-radius:0 0 3px 3px}
+.cell{position:absolute;border-radius:8px;background:rgba(90,56,22,.10);box-shadow:inset 0 1px 3px rgba(60,34,10,.18);box-sizing:border-box;z-index:2}
+.cell.locked{background:rgba(40,24,10,.42);box-shadow:inset 0 0 0 2px rgba(255,210,120,.45)}
+.cell.locked::after{content:"🔒";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:min(5vw,22px);opacity:.95}
+.tile{position:absolute;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:min(6.4vw,32px);line-height:1;will-change:transform;transform:translate3d(0,0,0);z-index:5;cursor:grab;background:radial-gradient(circle at 38% 32%,rgba(255,255,255,.85),rgba(255,255,255,.18) 60%,rgba(255,255,255,0));box-shadow:0 4px 7px rgba(60,34,10,.3),inset 0 1px 0 rgba(255,255,255,.6)}
+.tile img{max-width:90%;max-height:90%;object-fit:contain;pointer-events:none;filter:drop-shadow(0 2px 2px rgba(0,0,0,.22))}
+.tile.locked{cursor:not-allowed;filter:grayscale(.35) brightness(.82)}
+.tile.locked::after{content:"🔒";position:absolute;right:-2px;top:-2px;font-size:min(3.4vw,15px)}
+.tile.dragging{z-index:40;cursor:grabbing;transition:none !important;box-shadow:0 12px 22px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.6);filter:brightness(1.07)}
+.tile.smooth{transition:transform .16s cubic-bezier(.3,.7,.3,1)}
+.tile.pop{animation:pop .26s ease forwards}
+.hand{position:absolute;font-size:42px;z-index:45;pointer-events:none;animation:hand 1.3s infinite;filter:drop-shadow(0 3px 4px rgba(0,0,0,.3))}
+.praise{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%) scale(.6);color:#ff8a2a;font-weight:900;font-size:min(11vw,52px);text-shadow:0 3px 0 #fff,0 6px 14px rgba(0,0,0,.25);z-index:46;opacity:0;pointer-events:none}
+.praise.show{animation:praise 1s ease forwards}
+/* green Install button bottom-right */
+.install{position:absolute;right:5%;bottom:4%;background:linear-gradient(180deg,#5fd35a,#2faa3a);color:#fff;border:none;border-radius:999px;padding:14px 34px;font-weight:900;font-size:min(5.2vw,24px);z-index:32;box-shadow:0 6px 14px rgba(34,140,50,.45),inset 0 1px 0 rgba(255,255,255,.5);cursor:pointer;animation:ctaPulse 1.3s infinite}
+#overlay{position:absolute;inset:0;background:rgba(20,10,0,.45);display:none;align-items:center;justify-content:center;z-index:50}
+.card{width:78%;background:#fff1e5;border-radius:28px;padding:30px 26px;text-align:center;box-shadow:0 20px 40px rgba(0,0,0,.3)}
+.card h1{margin:0 0 10px;color:#7a4519;font-size:min(11vw,44px)}
+.card p{margin:0 0 20px;color:#8a663d;font-size:min(5vw,22px);font-weight:700;line-height:1.4}
+.bigbtn{border:none;border-radius:999px;background:linear-gradient(180deg,#5fd35a,#2faa3a);color:#fff;padding:16px 38px;font-size:min(6vw,26px);font-weight:900;cursor:pointer;box-shadow:0 6px 14px rgba(34,140,50,.45);animation:ctaPulse 1.4s infinite}
+@keyframes ctaPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+@keyframes pop{0%{transform:scale(1);opacity:1}55%{transform:scale(1.28);opacity:1}100%{transform:scale(0);opacity:0}}
+@keyframes hand{0%,100%{transform:translate(0,0) rotate(0)}50%{transform:translate(6px,8px) rotate(-10deg)}}
+@keyframes praise{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}30%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}70%{opacity:1;transform:translate(-50%,-60%) scale(1)}100%{opacity:0;transform:translate(-50%,-90%) scale(.9)}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="toptip" id="toptip">Can you collect 9 items?</div>
+
+  <div id="stage"></div>
+  <div class="praise" id="praise"></div>
+  <button class="install" id="installBtn">Install</button>
+
+  <div id="overlay">
+    <div class="card">
+      <h1 id="ovTitle">Level Clear!</h1>
+      <p id="ovText">Great job! Jump into the full game now.</p>
+      <button class="bigbtn" id="ovBtn">Install</button>
+    </div>
+  </div>
+</div>
+<script>
+var CLICK_URL = "STORE_URL_PLACEHOLDER";
+var GOAL = 8;
+// Optional per-type tile images (base64 data URIs) injected by generator; null = emoji fallback.
+var TILE_DATA = /*{{TILE_DATA}}*/null;
+var EMOJI = ['🥤','🥕','🍊','🍅','🍓','🫐','🧴','🍉','🥔'];
+var NTYPES = 6;
+
+function tileFace(type){
+  if (type == null) return '';
+  if (TILE_DATA && TILE_DATA[type]) return '<img src="' + TILE_DATA[type] + '" alt="">';
+  return EMOJI[type] || '⭐';
+}
+
+function openStore() {
+  try { if (window.mraid && typeof window.mraid.open === 'function') { window.mraid.open(CLICK_URL); return; } } catch (e) {}
+  try { window.open(CLICK_URL, '_blank', 'noopener'); return; } catch (e) {}
+  window.location.href = CLICK_URL;
+}
+
+// ---- Synth SFX ----
+var actx = null;
+function ac(){ if(!actx){ try{ actx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return actx; }
+function beep(freq, dur, type, vol){
+  var c = ac(); if(!c) return;
+  try {
+    var o = c.createOscillator(), g = c.createGain();
+    o.type = type || 'sine'; o.frequency.value = freq;
+    g.gain.value = vol || 0.16; o.connect(g); g.connect(c.destination);
+    var t = c.currentTime; o.start(t);
+    g.gain.setValueAtTime(g.gain.value, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur); o.stop(t + dur);
+  } catch(e){}
+}
+function sfxPick(){ beep(440, 0.08, 'triangle', 0.12); }
+function sfxDrop(){ beep(300, 0.09, 'sine', 0.12); }
+function sfxLock(){ beep(140, 0.12, 'sawtooth', 0.12); }
+function sfxClear(){ beep(660,0.1,'square',0.16); setTimeout(function(){beep(880,0.12,'square',0.16);},90); setTimeout(function(){beep(1180,0.16,'square',0.16);},190); }
+function sfxWin(){ [523,659,784,1046].forEach(function(f,i){ setTimeout(function(){beep(f,0.22,'triangle',0.2);}, i*140); }); }
+function praiseSay(text){
+  try { if (window.speechSynthesis) { var u=new SpeechSynthesisUtterance(text); u.rate=1.05;u.pitch=1.2;u.volume=0.8; window.speechSynthesis.cancel(); window.speechSynthesis.speak(u);} } catch(e){}
+}
+
+var stageEl = document.getElementById('stage');
+var praiseEl = document.getElementById('praise');
+var topTip = document.getElementById('toptip');
+topTip.textContent = 'Can you collect ' + GOAL + ' items?';
+var PRAISES = ['Great!','Nice!','Perfect!','Combo!','Awesome!'];
+document.getElementById('installBtn').onclick = openStore;
+document.getElementById('ovBtn').onclick = openStore;
+
+// ===== Board model =====
+// TWO shelves: LEFT moving (3 cols) + RIGHT fixed double-column connected (6 cols).
+// Both LAYERS(8) layers, aligned. RIGHT has locks on layer 0 & 3.
+var LAYERS = 8;
+var COLS = { L:3, R:6 };
+var regions = ['L','R'];
+var board = {};   // region -> array[layer][col] = type|null
+var locked = {};  // region -> array[layer][col] = true|false
+var tileEls = {}; // key -> element
+var geo = {};     // region -> {x,y,cw,ch,gap,...}
+var leftOffset = 0, leftMoving = false, leftSpeed = 0.55;
+var clears = 0, busy = false, drag = null;
+var stageW=0, stageH=0;
+
+function rand(n){ return Math.floor(Math.random()*n); }
+
+function layout(){
+  var r = stageEl.getBoundingClientRect();
+  stageW = r.width; stageH = r.height;
+  var gap = Math.max(3, stageW*0.01);
+  var pad = stageW*0.022;
+  var groupGap = stageW*0.035;
+  var topY = stageH*0.05;
+  // cell size driven so RIGHT (6 cols) + LEFT (3 cols) fit width
+  var usable = stageW - stageW*0.04 - groupGap;
+  // total columns 3 + 6 = 9, plus inner gaps + 2 group paddings*2
+  var cw = (usable - pad*4 - gap*((3-1)+(6-1))) / 9;
+  var ch = cw;
+  var leftGW = 3*cw + 2*gap + pad*2;
+  var rightGW = 6*cw + 5*gap + pad*2;
+  var lx = stageW*0.02;
+  var rx = lx + leftGW + groupGap;
+  geo.L = {x:lx+pad, y:topY+pad, cw:cw, ch:ch, gap:gap, gx:lx, gy:topY, gw:leftGW, pad:pad};
+  geo.R = {x:rx+pad, y:topY+pad, cw:cw, ch:ch, gap:gap, gx:rx, gy:topY, gw:rightGW, pad:pad};
+}
+
+function cellXY(region, layer, col){
+  var g = geo[region];
+  var x = g.x + col*(g.cw + g.gap);
+  var y = g.y + layer*(g.ch + g.gap);
+  if (region === 'L') y += leftOffset;
+  return {x:x, y:y, w:g.cw, h:g.ch};
+}
+
+// fill one layer with 2-3 items per 3-col sub-shelf. For 6-col region this yields
+// 4-6 items/layer (each 3-col half independently gets 2 or 3). Half layers lighter.
+function fillLayer(layerIndex, cols){
+  var row = [];
+  for (var i=0;i<cols;i++) row.push(null);
+  for (var base=0; base<cols; base+=3){
+    var count = ((layerIndex + base/3) % 2 === 0) ? 3 : 2; // alternate 3/2
+    var slots = [0,1,2];
+    if (count === 2) slots.splice(rand(3),1);
+    slots.forEach(function(s){ row[base+s] = rand(NTYPES); });
+  }
+  return row;
+}
+
+function initBoard(){
+  regions.forEach(function(region){
+    var cols = COLS[region];
+    board[region] = [];
+    locked[region] = [];
+    for (var l=0;l<LAYERS;l++){
+      board[region].push(fillLayer(l, cols));
+      var lk=[]; for(var c=0;c<cols;c++) lk.push(false);
+      locked[region].push(lk);
+    }
+  });
+  // RIGHT connected shelf: lock part of layer 0 and layer 4 (idx 0 / 3)
+  lockCells('R', 0, [0,1]);
+  lockCells('R', 3, [3,4]);
+  seedSolvable();
+}
+
+function lockCells(region, layer, cols){
+  cols.forEach(function(s){
+    if (board[region][layer][s] == null) board[region][layer][s] = rand(NTYPES);
+    locked[region][layer][s] = true;
+  });
+}
+
+// plant reachable matches
+function seedSolvable(){
+  var t = rand(NTYPES);
+  // RIGHT vertical near-triple at col 2, layers 5,6 same; layer4 empty to drag into
+  board.R[5][2] = t; board.R[6][2] = t; board.R[4][2] = null;
+  // LEFT vertical near-triple at col 0, layers 1,2 same; layer0 empty
+  var t2 = (t+1)%NTYPES;
+  board.L[1][0] = t2; board.L[2][0] = t2; board.L[0][0] = null;
+}
+
+function clearGroupBgs(){
+  [].slice.call(stageEl.querySelectorAll('.shelf-frame,.plank,.cell')).forEach(function(n){n.remove();});
+}
+
+function buildBg(){
+  clearGroupBgs();
+  regions.forEach(function(region){
+    var g = geo[region]; var cols = COLS[region];
+    var frameH = LAYERS*g.ch + (LAYERS-1)*g.gap + g.pad*2;
+    // wooden outer frame (side posts + top/bottom via box-shadow)
+    var fr = document.createElement('div');
+    fr.className='shelf-frame';
+    fr.style.left=g.gx+'px'; fr.style.top=g.gy+'px';
+    fr.style.width=g.gw+'px'; fr.style.height=frameH+'px';
+    stageEl.appendChild(fr);
+    for (var l=0;l<LAYERS;l++){
+      // horizontal plank spanning the shelf interior, sitting under this layer's items
+      var p0 = cellXY(region,l,0);
+      var plankTop = (region==='L'? (g.y + l*(g.ch+g.gap)) : p0.y) + g.ch - 2;
+      var pl=document.createElement('div'); pl.className='plank';
+      pl.style.left=(g.gx + g.gw*0.03)+'px';
+      pl.style.width=(g.gw*0.94)+'px';
+      pl.style.top=plankTop+'px';
+      pl.style.height=Math.max(6, g.ch*0.14)+'px';
+      stageEl.appendChild(pl);
+      for (var s=0;s<cols;s++){
+        var p = cellXY(region,l,s);
+        var cl=document.createElement('div');
+        cl.className='cell'+(locked[region][l][s]?' locked':'');
+        cl.style.left=p.x+'px';
+        cl.style.top=(region==='L'? (g.y + l*(g.ch+g.gap)) : p.y)+'px';
+        cl.style.width=p.w+'px'; cl.style.height=p.h+'px';
+        stageEl.appendChild(cl);
+      }
+    }
+  });
+}
+
+function tileKey(region,l,s){ return region+'-'+l+'-'+s; }
+
+function renderTiles(){
+  for (var k in tileEls){ if(tileEls[k]&&tileEls[k].parentNode) tileEls[k].parentNode.removeChild(tileEls[k]); }
+  tileEls = {};
+  regions.forEach(function(region){
+    var grid=board[region]; var cols=COLS[region];
+    for (var l=0;l<grid.length;l++) for (var s=0;s<cols;s++){
+      var t=grid[l][s];
+      if (t==null) continue;
+      var p=cellXY(region,l,s);
+      var el=document.createElement('div');
+      var isLock = locked[region][l][s];
+      el.className='tile'+(isLock?' locked':'');
+      el.style.width=p.w+'px'; el.style.height=p.h+'px';
+      el.style.transform='translate3d('+p.x+'px,'+p.y+'px,0)';
+      el.dataset.region=region; el.dataset.l=l; el.dataset.s=s;
+      el.innerHTML=tileFace(t);
+      if (!isLock) attachDrag(el);
+      else el.addEventListener('pointerdown', function(){ sfxLock(); });
+      stageEl.appendChild(el);
+      tileEls[tileKey(region,l,s)]=el;
+    }
+  });
+}
+
+function positionTile(region,l,s){
+  var el=tileEls[tileKey(region,l,s)]; if(!el) return;
+  var p=cellXY(region,l,s);
+  el.style.transform='translate3d('+p.x+'px,'+p.y+'px,0)';
+}
+
+// ---------- Drag ----------
+function attachDrag(el){ el.addEventListener('pointerdown', onDown); }
+function eventXY(e){ var r=stageEl.getBoundingClientRect(); return {x:e.clientX-r.left, y:e.clientY-r.top}; }
+function onDown(e){
+  if (busy) return;
+  var el=e.currentTarget;
+  var region=el.dataset.region, l=+el.dataset.l, s=+el.dataset.s;
+  if (locked[region][l][s] || board[region][l][s]==null) return;
+  ac(); sfxPick();
+  var p=cellXY(region,l,s); var pt=eventXY(e);
+  drag={el:el, region:region, l:l, s:s, type:board[region][l][s], ox:pt.x-p.x, oy:pt.y-p.y, baseX:p.x, baseY:p.y, lastX:p.x, lastY:p.y};
+  el.classList.add('dragging'); el.classList.remove('smooth');
+  try{ el.setPointerCapture(e.pointerId); }catch(_){ }
+  hideHand();
+  window.addEventListener('pointermove', onMove);
+  window.addEventListener('pointerup', onUp);
+}
+function onMove(e){
+  if(!drag) return;
+  var pt=eventXY(e); var x=pt.x-drag.ox, y=pt.y-drag.oy;
+  drag.el.style.transform='translate3d('+x+'px,'+y+'px,0)';
+  drag.lastX=x; drag.lastY=y;
+}
+function onUp(e){
+  window.removeEventListener('pointermove', onMove);
+  window.removeEventListener('pointerup', onUp);
+  if(!drag) return;
+  var d=drag; drag=null;
+  d.el.classList.remove('dragging');
+  var target=findDropCell(d.lastX, d.lastY);
+  if (target && !(target.region===d.region && target.l===d.l && target.s===d.s) && !locked[target.region][target.l][target.s]){
+    doSwap(d.region,d.l,d.s, target.region,target.l,target.s); sfxDrop();
+  } else {
+    d.el.classList.add('smooth');
+    var p=cellXY(d.region,d.l,d.s);
+    d.el.style.transform='translate3d('+p.x+'px,'+p.y+'px,0)';
+  }
+}
+function findDropCell(x,y){
+  var best=null,bd=1e9;
+  regions.forEach(function(region){
+    var grid=board[region]; var cols=COLS[region];
+    for (var l=0;l<grid.length;l++) for (var s=0;s<cols;s++){
+      var p=cellXY(region,l,s);
+      var dx=x-p.x, dy=y-p.y;
+      var dist=dx*dx+dy*dy;
+      if (dist<bd){ bd=dist; best={region:region,l:l,s:s,p:p}; }
+    }
+  });
+  if (best && bd < (best.p.w*best.p.w)*1.4) return best;
+  return null;
+}
+function doSwap(rA,la,sa, rB,lb,sb){
+  var a=board[rA][la][sa], b=board[rB][lb][sb];
+  board[rA][la][sa]=b; board[rB][lb][sb]=a;
+  busy=true; renderTiles();
+  requestAnimationFrame(function(){
+    [].slice.call(stageEl.querySelectorAll('.tile')).forEach(function(t){ t.classList.add('smooth'); });
+    setTimeout(resolveMatches, 170);
+  });
+}
+
+function findMatches(){
+  var hits=[];
+  regions.forEach(function(region){
+    var grid=board[region]; var R=grid.length, C=COLS[region];
+    for (var r=0;r<R;r++){ var run=1;
+      for (var c=1;c<=C;c++){
+        var same=c<C && grid[r][c]!=null && grid[r][c]===grid[r][c-1];
+        if(same) run++; else { if(run>=3) for(var k=1;k<=run;k++) hits.push({region:region,l:r,s:c-k}); run=1; }
+      }
+    }
+    for (var c2=0;c2<C;c2++){ var run2=1;
+      for (var r2=1;r2<=R;r2++){
+        var same2=r2<R && grid[r2][c2]!=null && grid[r2][c2]===grid[r2-1][c2];
+        if(same2) run2++; else { if(run2>=3) for(var k2=1;k2<=run2;k2++) hits.push({region:region,l:r2-k2,s:c2}); run2=1; }
+      }
+    }
+  });
+  return hits;
+}
+function resolveMatches(){
+  var hits=findMatches();
+  if (hits.length===0){ busy=false; return; }
+  var leftInvolved=false, seen={};
+  hits.forEach(function(h){
+    var key=h.region+'-'+h.l+'-'+h.s; if(seen[key])return; seen[key]=1;
+    if (locked[h.region][h.l][h.s]) return; // locked cells never clear
+    if (h.region==='L') leftInvolved=true;
+    var el=tileEls[tileKey(h.region,h.l,h.s)];
+    if (el) el.classList.add('pop');
+    board[h.region][h.l][h.s]=null;
+  });
+  sfxClear(); clears++; showPraise();
+  if (leftInvolved) startLeftMotion();
+  setTimeout(function(){
+    refill(); renderTiles(); busy=false;
+    if (clears>=GOAL) setTimeout(win,260);
+  },280);
+}
+function refill(){
+  // RIGHT connected shelf refills empties (keep locked as-is)
+  for (var l=0;l<board.R.length;l++) for (var s=0;s<COLS.R;s++){
+    if (board.R[l][s]==null && !locked.R[l][s] && Math.random()<0.7) board.R[l][s]=rand(NTYPES);
+  }
+  // LEFT refills nulls; full recycle handled by tickLeft
+  for (var l2=0;l2<board.L.length;l2++) for (var s2=0;s2<COLS.L;s2++){
+    if (board.L[l2][s2]==null && Math.random()<0.7) board.L[l2][s2]=rand(NTYPES);
+  }
+}
+
+// ----- Left moving shelf -----
+var motionId=0;
+function startLeftMotion(){ leftMoving=true; }
+function tickLeft(){
+  if (leftMoving){
+    leftOffset += leftSpeed;
+    var g=geo.L; var period=(g.ch+g.gap);
+    if (leftOffset >= period){
+      leftOffset -= period;
+      // recycle bottom layer to top with a fresh 2-3 item layer
+      var col=board.L; var lockCol=locked.L;
+      col.pop(); col.unshift(fillLayer(rand(2), COLS.L));
+      lockCol.pop(); lockCol.unshift([false,false,false]);
+      renderTiles();
+    } else if (!drag){
+      for (var l=0;l<board.L.length;l++) for (var s=0;s<COLS.L;s++) positionTile('L',l,s);
+    }
+  }
+  motionId=requestAnimationFrame(tickLeft);
+}
+
+function showPraise(){
+  var txt=PRAISES[rand(PRAISES.length)];
+  praiseEl.textContent=txt; praiseEl.classList.remove('show'); void praiseEl.offsetWidth; praiseEl.classList.add('show');
+  praiseSay(txt);
+}
+var handEl=null;
+function showHand(region,l,s){
+  hideHand(); var p=cellXY(region,l,s);
+  handEl=document.createElement('div'); handEl.className='hand'; handEl.textContent='👆';
+  handEl.style.transform='translate3d('+(p.x+p.w*0.4)+'px,'+(p.y+p.h*0.4)+'px,0)';
+  stageEl.appendChild(handEl);
+}
+function hideHand(){ if(handEl&&handEl.parentNode){ handEl.parentNode.removeChild(handEl); handEl=null; } }
+
+function win(){ sfxWin(); leftMoving=false; document.getElementById('overlay').style.display='flex'; }
+
+function init(){
+  layout(); initBoard(); buildBg(); renderTiles();
+  showHand('R',4,2);
+  cancelAnimationFrame(motionId); motionId=requestAnimationFrame(tickLeft);
+}
+window.addEventListener('resize', function(){ layout(); buildBg(); renderTiles(); });
+init();
+</script>
+</body>
+</html>

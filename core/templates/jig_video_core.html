@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<!--
+  JigSolitaire 视频开场版本 V9 (V4 + 音效 + 男声) - Google UAC渠道适配（完全嵌入 - 压缩优化版）
+  生成日期: 2026-04-17
+  V9新增功能 (基于V4):
+  - 4秒无操作显示提示（小手图标+高亮建议卡牌）
+  - 拼对碎片时显示专属激励词
+  - 挪动音效（交换卡牌时）
+  - 拼合音效（正确归位时）
+  - 磁性男声口播激励词（拼对时）
+-->
+<html lang="en">
+<head>
+<!-- Google UAC渠道适配版本 - 添加了ExitApi跳转和锁屏音频控制功能 -->
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>JigSolitaire Master - Video Intro V4</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  html, body {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    position: fixed;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: #1a1a1a;
+  }
+
+  /* ==================== 视频开场层 ==================== */
+  #videoLayer {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    transition: opacity 0.5s;
+  }
+
+  #videoLayer.hide {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  #introVideo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  /* ==================== 游戏主容器 ==================== */
+  #gameContainer {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    opacity: 0;
+    transition: opacity 0.5s;
+  }
+
+  #gameContainer.active {
+    display: flex;
+  }
+
+  #gameContainer.show {
+    opacity: 1;
+  }
+
+  /* ==================== 拼图容器 ==================== */
+  #puzzleContainer {
+    position: relative;
+    max-width: 90vmin;
+    max-height: 90vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #puzzleGrid {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 4px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  }
+
+  /* ==================== 拼图方块 ==================== */
+  .puzzle-piece {
+    position: relative;
+    background-size: 400% 400%;
+    background-repeat: no-repeat;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+  }
+
+  .puzzle-piece:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  }
+
+  .puzzle-piece.correct {
+    border: 3px solid #4caf50;
+    box-shadow: 0 0 20px rgba(76, 175, 80, 0.6);
+  }
+
+  .puzzle-piece.dragging {
+    position: fixed !important;
+    z-index: 10000 !important;
+    pointer-events: none;
+    transform: scale(1.15) !important;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6) !important;
+    border: 3px solid #FFD700 !important;
+    opacity: 0.95;
+    cursor: grabbing !important;
+  }
+
+  .puzzle-piece.placeholder {
+    opacity: 0.3;
+    border: 3px dashed rgba(255, 215, 0, 0.5);
+  }
+
+  .puzzle-piece.highlight {
+    border: 3px solid #FFD700 !important;
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.9) !important;
+    transform: scale(1.08);
+  }
+
+  /* 提示高亮 */
+  .puzzle-piece.hint-highlight {
+    animation: hintPulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes hintPulse {
+    0%, 100% {
+      border: 3px solid rgba(255, 215, 0, 0.8);
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+      transform: scale(1);
+    }
+    50% {
+      border: 3px solid rgba(255, 215, 0, 1);
+      box-shadow: 0 0 30px rgba(255, 215, 0, 0.9);
+      transform: scale(1.05);
+    }
+  }
+
+  /* ==================== 提示小手 ==================== */
+  #hintHand {
+    position: fixed;
+    font-size: 50px;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+    animation: handFloat 1.5s ease-in-out infinite;
+  }
+
+  #hintHand.show {
+    opacity: 1;
+  }
+
+  @keyframes handFloat {
+    0%, 100% {
+      transform: translateY(0) scale(1);
+    }
+    50% {
+      transform: translateY(-10px) scale(1.1);
+    }
+  }
+
+  /* ==================== Play Now 按钮 ==================== */
+  #playButton {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 16px 50px;
+    background: linear-gradient(135deg, #00a173 0%, #00d98b 100%);
+    color: white;
+    font-size: 22px;
+    font-weight: bold;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 6px 25px rgba(0, 161, 115, 0.5);
+    z-index: 99999;
+    transition: transform 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  #playButton:active {
+    transform: translateX(-50%) scale(0.95);
+  }
+
+  /* ==================== Toast 提示 ==================== */
+  #toast {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    padding: 12px 30px;
+    background: rgba(0, 0, 0, 0.85);
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
+    border-radius: 25px;
+    z-index: 10000;
+    opacity: 0;
+    transition: all 0.3s;
+    pointer-events: none;
+  }
+
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* 特殊样式：归位时的激励词 */
+  #toast.correct {
+    background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+    font-size: 22px;
+    box-shadow: 0 4px 20px rgba(76, 175, 80, 0.6);
+  }
+
+  /* ==================== 音频控制 ==================== */
+  #audioToggle {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    font-size: 24px;
+    cursor: pointer;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+    transition: all 0.2s;
+  }
+
+  #audioToggle:active {
+    transform: scale(0.9);
+  }
+
+  /* ==================== 胜利层 ==================== */
+  #winLayer {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 20000;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.5s;
+  }
+
+  #winLayer.active {
+    display: flex;
+  }
+
+  #winLayer.show {
+    opacity: 1;
+  }
+
+  #winImage {
+    max-width: 85vmin;
+    max-height: 70vh;
+    object-fit: contain;
+    border-radius: 15px;
+    box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
+    margin-bottom: 30px;
+    animation: winPulse 1s ease-in-out infinite;
+  }
+
+  @keyframes winPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+  }
+
+  #winMessage {
+    font-size: 36px;
+    font-weight: bold;
+    color: #ffd700;
+    text-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    margin-bottom: 20px;
+    animation: bounce 0.5s ease-out;
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+  }
+
+  /* ==================== Loading ==================== */
+  #loading {
+    position: fixed;
+    inset: 0;
+    background: #1a1a1a;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    transition: opacity 0.5s;
+  }
+
+  #loading.hide {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .loader {
+    width: 60px;
+    height: 60px;
+    border: 5px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  #loadingText {
+    color: white;
+    font-size: 16px;
+    margin-top: 20px;
+    opacity: 0.8;
+  }
+</style>
+
+<!-- 生成时间: 2026-04-16 17:41:05 -->
+<!-- 生成工具: JigSolitaire Playable Generator -->
+
+<!-- 生成时间: 2026-04-17 17:46:25 -->
+<!-- 生成工具: JigSolitaire Playable Generator -->
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading">
+  <div class="loader"></div>
+  <div id="loadingText">Loading...</div>
+</div>
+
+<!-- 视频开场层 -->
+<div id="videoLayer">
+  <video id="introVideo" playsinline muted>
+    <source src="PUZZLE_VIDEO_PLACEHOLDER" type="video/mp4">
+  </video>
+</div>
+
+<!-- 游戏容器 -->
+<div id="gameContainer">
+  <div id="puzzleContainer">
+    <div id="puzzleGrid"></div>
+  </div>
+</div>
+
+<!-- 胜利层 -->
+<div id="winLayer">
+  <img id="winImage" alt="Complete">
+  <div id="winMessage"></div>
+</div>
+
+<!-- Play Now 按钮 -->
+<button id="playButton">Play Now</button>
+
+<!-- Toast 提示 -->
+<div id="toast"></div>
+
+<!-- 提示小手 -->
+<div id="hintHand">👆</div>
+
+<!-- 音频控制 -->
+<button id="audioToggle">🔇</button>
+
+<!-- BGM Audio -->
+<audio id="bgmAudio" loop>
+  <source src="" type="audio/mpeg">
+</audio>
+
+<!-- 音效 Audio -->
+<audio id="moveSound">
+  <source src="" type="audio/mpeg">
+</audio>
+
+<audio id="matchSound">
+  <source src="" type="audio/mpeg">
+</audio>
+
+<script>
+  // ==================== 配置 ====================
+  const CLICK_URL = "STORE_URL_PLACEHOLDER";
+  const GRID_SIZE = 4;
+  const HINT_DELAY = 4000; // 4秒无操作显示提示
+
+  // 交换鼓励词
+  const SWAP_WORDS = [
+    "Nice Try!", "Keep Going!", "Good Move!", "Try Again!", "You Can Do It!"
+  ];
+
+  // 归位激励词（拼对碎片时）
+  const CORRECT_WORDS = [
+    "✨ Perfect!", "🌟 Excellent!", "💫 Amazing!", "⭐ Great Job!",
+    "🎯 Spot On!", "🔥 Fantastic!", "💪 Well Done!", "👏 Brilliant!",
+    "🎉 Awesome!", "💖 Superb!", "🏆 Outstanding!", "✅ Correct!"
+  ];
+
+  // 进度里程碑
+  const MILESTONE_WORDS = {
+    4: "🌟 Quarter Done!",
+    8: "🎯 Halfway There!",
+    12: "🔥 Almost There!",
+    15: "💪 One More Piece!"
+  };
+
+  const WIN_MESSAGES = [
+    "🎉 Perfect! You Did It!",
+    "🌟 Amazing! Puzzle Complete!",
+    "✨ Fantastic! You're A Star!",
+    "🏆 Excellent Work! You Win!",
+    "💫 Outstanding! Well Done!"
+  ];
+
+  // ==================== 全局变量 ====================
+  let puzzleImage = null;
+  let puzzleWidth = 0;
+  let puzzleHeight = 0;
+  let gridPositions = [];
+  let correctCount = 0;
+  let bgmAudio = null;
+  let audioEnabled = false;
+  let moveSound = null;
+  let matchSound = null;
+
+  // TTS语音系统
+  let speechSynth = window.speechSynthesis;
+
+
+  // 拖拽相关
+  let draggedPiece = null;
+  let draggedPieceClone = null;
+  let originalIndex = -1;
+  let offsetX = 0;
+  let offsetY = 0;
+
+  // 提示相关
+  let hintTimer = null;
+  let lastActionTime = Date.now();
+  let hintShowing = false;
+
+  // ==================== 音频系统 ====================
+  function initBGM() {
+    if (!bgmAudio) {
+      bgmAudio = document.getElementById('bgmAudio');
+      bgmAudio.volume = 0.3;  // 降低BGM音量，让音效更突出
+    }
+    // 初始化音效
+    if (!moveSound) {
+      moveSound = document.getElementById('moveSound');
+      if (moveSound) moveSound.volume = 0.85;  // 挪动音效音量
+    }
+    if (!matchSound) {
+      matchSound = document.getElementById('matchSound');
+      if (matchSound) matchSound.volume = 0.9;  // 拼合音效音量（最响）
+    }
+  }
+
+  function startBGM() {
+    if (!audioEnabled) return;
+    initBGM();
+    bgmAudio.play().catch(e => console.log('[BGM] Play failed:', e));
+    document.getElementById('audioToggle').textContent = '🔊';
+  }
+
+
+  function playMoveSound() {
+    if (!audioEnabled || !moveSound) return;
+    moveSound.currentTime = 0;
+    moveSound.play().catch(e => console.log('[Sound] Move play failed'));
+  }
+
+  function playMatchSound() {
+    if (!audioEnabled || !matchSound) return;
+    matchSound.currentTime = 0;
+    matchSound.play().catch(e => console.log('[Sound] Match play failed'));
+  }
+
+  // 男声口播激励词
+  function speak(text) {
+    if (!audioEnabled || !speechSynth) return;
+
+    // 取消之前的语音
+    speechSynth.cancel();
+
+    // 清除文本中的表情符号
+    const cleanText = text.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim();
+    if (!cleanText) return;
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+
+    // 男声设置：低音调、稍慢速度，营造磁性效果
+    utterance.rate = 0.95;      // 稍慢的语速
+    utterance.pitch = 0.8;      // 较低的音调（磁性男声）
+    utterance.volume = 1.0;     // 最大音量
+    utterance.lang = 'en-US';   // 英语
+
+    // 尝试选择男声
+    const voices = speechSynth.getVoices();
+    const maleVoice = voices.find(voice =>
+      voice.name.includes('Male') ||
+      voice.name.includes('David') ||
+      voice.name.includes('George') ||
+      voice.name.includes('Ryan')
+    );
+    if (maleVoice) {
+      utterance.voice = maleVoice;
+    }
+
+    speechSynth.speak(utterance);
+  }
+
+  function stopBGM() {
+    if (bgmAudio) {
+      bgmAudio.pause();
+      bgmAudio.currentTime = 0;
+    }
+    document.getElementById('audioToggle').textContent = '🔇';
+  }
+
+  // ==================== Toast 提示 ====================
+  function showToast(message, isCorrect = false) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+
+    if (isCorrect) {
+      toast.classList.add('correct');
+    } else {
+      toast.classList.remove('correct');
+    }
+
+    toast.classList.add('show');
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => {
+        toast.classList.remove('correct');
+      }, 300);
+    }, 1500);
+  }
+
+  // ==================== 提示系统 ====================
+  function resetHintTimer() {
+    lastActionTime = Date.now();
+    hideHint();
+
+    if (hintTimer) {
+      clearTimeout(hintTimer);
+    }
+
+    // 如果游戏还没完成，设置新的提示定时器
+    if (correctCount < 16) {
+      hintTimer = setTimeout(showHint, HINT_DELAY);
+    }
+  }
+
+  function showHint() {
+    if (hintShowing || correctCount >= 16) return;
+
+    // 找到一个可以归位的交换建议
+    const suggestion = findBestSwap();
+
+    if (!suggestion) return;
+
+    hintShowing = true;
+    const pieces = document.querySelectorAll('.puzzle-piece');
+    const piece1 = pieces[suggestion.index1];
+    const piece2 = pieces[suggestion.index2];
+
+    // 高亮两张卡牌
+    piece1.classList.add('hint-highlight');
+    piece2.classList.add('hint-highlight');
+
+    // 显示小手图标（指向第一张卡牌）
+    const rect = piece1.getBoundingClientRect();
+    const hand = document.getElementById('hintHand');
+    hand.style.left = (rect.left + rect.width / 2 - 25) + 'px';
+    hand.style.top = (rect.top + rect.height / 2 - 25) + 'px';
+    hand.classList.add('show');
+
+    console.log('[Hint] Showing hint for pieces', suggestion.index1, suggestion.index2);
+
+    // 3秒后自动隐藏
+    setTimeout(hideHint, 3000);
+  }
+
+  function hideHint() {
+    if (!hintShowing) return;
+
+    hintShowing = false;
+
+    document.querySelectorAll('.puzzle-piece').forEach(p => {
+      p.classList.remove('hint-highlight');
+    });
+
+    document.getElementById('hintHand').classList.remove('show');
+  }
+
+  function findBestSwap() {
+    // 找到一个交换后能让至少一个卡牌归位的建议
+    const pieces = Array.from(document.querySelectorAll('.puzzle-piece'));
+
+    for (let i = 0; i < gridPositions.length; i++) {
+      const pieceId = gridPositions[i];
+
+      // 如果这个位置已经正确，跳过
+      if (pieceId === i) continue;
+
+      // 找到这个卡牌应该去的位置
+      const targetIndex = pieceId;
+
+      // 检查目标位置的卡牌
+      const targetPieceId = gridPositions[targetIndex];
+
+      // 如果交换后至少有一个能归位，这就是个好建议
+      if (targetPieceId === i || pieceId === targetIndex) {
+        return { index1: i, index2: targetIndex };
+      }
+    }
+
+    // 如果没找到能归位的，就随机返回两个错位的
+    const wrongPieces = [];
+    for (let i = 0; i < gridPositions.length; i++) {
+      if (gridPositions[i] !== i) {
+        wrongPieces.push(i);
+      }
+    }
+
+    if (wrongPieces.length >= 2) {
+      return {
+        index1: wrongPieces[0],
+        index2: wrongPieces[1]
+      };
+    }
+
+    return null;
+  }
+
+  // ==================== 视频播放控制 ====================
+  function playIntroVideo() {
+    return new Promise((resolve) => {
+      const video = document.getElementById('introVideo');
+      const videoLayer = document.getElementById('videoLayer');
+
+      console.log('[Video] Starting playback...');
+
+      video.addEventListener('ended', () => {
+        console.log('[Video] Ended, capturing last frame...');
+        captureLastFrame(video);
+        setTimeout(() => {
+          videoLayer.classList.add('hide');
+          resolve();
+        }, 500);
+      });
+
+      video.addEventListener('error', (e) => {
+        console.error('[Video] Error:', e);
+        videoLayer.classList.add('hide');
+        resolve();
+      });
+
+      video.play().catch(e => {
+        console.log('[Video] Autoplay failed:', e);
+        document.addEventListener('click', () => {
+          video.play().catch(() => {
+            videoLayer.classList.add('hide');
+            resolve();
+          });
+        }, {once: true});
+      });
+    });
+  }
+
+  // ==================== 捕获最后一帧 ====================
+  function captureLastFrame(video) {
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 1920;
+    canvas.height = video.videoHeight || 1080;
+
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    puzzleImage = canvas.toDataURL('image/jpeg', 0.92);
+    puzzleWidth = canvas.width;
+    puzzleHeight = canvas.height;
+
+    document.getElementById('winImage').src = puzzleImage;
+
+    console.log('[Video] Last frame captured:', puzzleWidth, 'x', puzzleHeight);
+  }
+
+  // ==================== 初始化拼图 ====================
+  function initPuzzle() {
+    const grid = document.getElementById('puzzleGrid');
+    grid.innerHTML = '';
+
+    const aspectRatio = puzzleWidth / puzzleHeight;
+    const maxSize = Math.min(window.innerWidth * 0.9, window.innerHeight * 0.8);
+
+    let gridWidth, gridHeight;
+    if (aspectRatio > 1) {
+      gridWidth = Math.min(maxSize, puzzleWidth);
+      gridHeight = gridWidth / aspectRatio;
+    } else {
+      gridHeight = Math.min(maxSize, puzzleHeight);
+      gridWidth = gridHeight * aspectRatio;
+    }
+
+    grid.style.width = gridWidth + 'px';
+    grid.style.height = gridHeight + 'px';
+
+    console.log('[Puzzle] Grid size:', gridWidth, 'x', gridHeight);
+
+    gridPositions = Array.from({length: 16}, (_, i) => i);
+
+    do {
+      shuffleArray(gridPositions);
+    } while (getInversionCount(gridPositions) % 2 !== 0 || isSolved());
+
+    gridPositions.forEach((pieceId, index) => {
+      const piece = createPuzzlePiece(pieceId);
+      grid.appendChild(piece);
+    });
+
+    checkAllCorrect();
+
+    // 启动提示定时器
+    resetHintTimer();
+
+    console.log('[Puzzle] Initialized');
+  }
+
+  // ==================== 创建拼图方块 ====================
+  function createPuzzlePiece(pieceId) {
+    const piece = document.createElement('div');
+    piece.className = 'puzzle-piece';
+    piece.dataset.pieceId = pieceId;
+
+    const row = Math.floor(pieceId / GRID_SIZE);
+    const col = pieceId % GRID_SIZE;
+    const bgX = (col / (GRID_SIZE - 1)) * 100;
+    const bgY = (row / (GRID_SIZE - 1)) * 100;
+
+    piece.style.backgroundImage = `url(${puzzleImage})`;
+    piece.style.backgroundPosition = `${bgX}% ${bgY}%`;
+
+    piece.addEventListener('mousedown', startDrag);
+    piece.addEventListener('touchstart', startDrag, {passive: false});
+
+    return piece;
+  }
+
+  // ==================== 拖拽系统 ====================
+  function startDrag(e) {
+    e.preventDefault();
+
+    // 重置提示定时器
+    resetHintTimer();
+
+    const piece = e.currentTarget;
+    const rect = piece.getBoundingClientRect();
+    const touch = e.touches ? e.touches[0] : e;
+
+    draggedPiece = piece;
+    originalIndex = Array.from(piece.parentNode.children).indexOf(piece);
+
+    offsetX = touch.clientX - rect.left - rect.width / 2;
+    offsetY = touch.clientY - rect.top - rect.height / 2;
+
+    draggedPieceClone = piece.cloneNode(true);
+    draggedPieceClone.classList.add('dragging');
+    draggedPieceClone.style.width = rect.width + 'px';
+    draggedPieceClone.style.height = rect.height + 'px';
+    draggedPieceClone.style.left = (touch.clientX - offsetX - rect.width / 2) + 'px';
+    draggedPieceClone.style.top = (touch.clientY - offsetY - rect.height / 2) + 'px';
+    document.body.appendChild(draggedPieceClone);
+
+    piece.classList.add('placeholder');
+
+    const moveHandler = (e) => handleDragMove(e, rect);
+    const endHandler = (e) => {
+      handleDragEnd(e);
+      document.removeEventListener('mousemove', moveHandler);
+      document.removeEventListener('mouseup', endHandler);
+      document.removeEventListener('touchmove', moveHandler);
+      document.removeEventListener('touchend', endHandler);
+    };
+
+    document.addEventListener('mousemove', moveHandler);
+    document.addEventListener('mouseup', endHandler);
+    document.addEventListener('touchmove', moveHandler, {passive: false});
+    document.addEventListener('touchend', endHandler);
+  }
+
+  function handleDragMove(e, originalRect) {
+    if (!draggedPieceClone) return;
+    e.preventDefault();
+
+    const touch = e.touches ? e.touches[0] : e;
+
+    draggedPieceClone.style.left = (touch.clientX - offsetX - originalRect.width / 2) + 'px';
+    draggedPieceClone.style.top = (touch.clientY - offsetY - originalRect.height / 2) + 'px';
+
+    const elementAtPoint = document.elementFromPoint(touch.clientX, touch.clientY);
+
+    document.querySelectorAll('.puzzle-piece').forEach(p => {
+      if (!p.classList.contains('placeholder')) {
+        p.classList.remove('highlight');
+      }
+    });
+
+    if (elementAtPoint && elementAtPoint.classList.contains('puzzle-piece') &&
+        !elementAtPoint.classList.contains('placeholder')) {
+      elementAtPoint.classList.add('highlight');
+    }
+  }
+
+  function handleDragEnd(e) {
+    if (!draggedPiece || !draggedPieceClone) return;
+
+    const touch = e.changedTouches ? e.changedTouches[0] : e;
+    const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
+
+    document.querySelectorAll('.puzzle-piece').forEach(p => {
+      p.classList.remove('highlight', 'placeholder');
+    });
+
+    if (draggedPieceClone && draggedPieceClone.parentNode) {
+      draggedPieceClone.parentNode.removeChild(draggedPieceClone);
+    }
+
+    if (targetElement && targetElement.classList.contains('puzzle-piece') &&
+        targetElement !== draggedPiece) {
+      swapPieces(draggedPiece, targetElement);
+    }
+
+    draggedPiece = null;
+    draggedPieceClone = null;
+    originalIndex = -1;
+  }
+
+  // ==================== 交换方块 ====================
+  function swapPieces(piece1, piece2) {
+    const piece1Id = parseInt(piece1.dataset.pieceId);
+    const piece2Id = parseInt(piece2.dataset.pieceId);
+
+    const index1 = gridPositions.indexOf(piece1Id);
+    const index2 = gridPositions.indexOf(piece2Id);
+
+    // 记录交换前的正确数量
+    const beforeCorrectCount = correctCount;
+
+    [gridPositions[index1], gridPositions[index2]] = [gridPositions[index2], gridPositions[index1]];
+
+    const grid = document.getElementById('puzzleGrid');
+    grid.innerHTML = '';
+    gridPositions.forEach(pieceId => {
+      grid.appendChild(createPuzzlePiece(pieceId));
+    });
+
+    checkAllCorrect();
+
+    // 根据是否有新的归位显示不同的提示
+    if (correctCount > beforeCorrectCount) {
+      // 有新归位，显示激励词
+      playMatchSound();
+      const message = MILESTONE_WORDS[correctCount] ||
+                     CORRECT_WORDS[Math.floor(Math.random() * CORRECT_WORDS.length)];
+      speak(message);  // 男声口播激励词
+      showToast(message, true);
+    } else {
+      // 普通交换，显示鼓励词
+      playMoveSound();
+      showToast(SWAP_WORDS[Math.floor(Math.random() * SWAP_WORDS.length)], false);
+    }
+
+    // 重置提示定时器
+    resetHintTimer();
+  }
+
+  // ==================== 检查正确性 ====================
+  function checkAllCorrect() {
+    correctCount = 0;
+    const pieces = document.querySelectorAll('.puzzle-piece');
+
+    pieces.forEach((piece, index) => {
+      const pieceId = parseInt(piece.dataset.pieceId);
+      if (pieceId === index) {
+        piece.classList.add('correct');
+        correctCount++;
+      } else {
+        piece.classList.remove('correct');
+      }
+    });
+
+    if (correctCount === 16) {
+      // 清除提示定时器
+      if (hintTimer) {
+        clearTimeout(hintTimer);
+      }
+      hideHint();
+      setTimeout(showWinScreen, 500);
+    }
+  }
+
+  // ==================== 胜利画面 ====================
+  function showWinScreen() {
+    const winLayer = document.getElementById('winLayer');
+    const winMessage = document.getElementById('winMessage');
+
+    winMessage.textContent = WIN_MESSAGES[Math.floor(Math.random() * WIN_MESSAGES.length)];
+
+    winLayer.classList.add('active');
+    setTimeout(() => {
+      winLayer.classList.add('show');
+    }, 100);
+
+    console.log('[Game] Victory!');
+
+    setTimeout(openStore, 3000);
+  }
+
+  // ==================== 打开商店 ====================
+  function openStore() {
+    console.log('[Store] Opening:', CLICK_URL);
+    if (typeof ExitApi !== 'undefined' && ExitApi.exit) {
+      ExitApi.exit();
+    } else if (typeof mraid !== 'undefined' && mraid.open) {
+      mraid.open(CLICK_URL);
+    } else {
+      window.open(CLICK_URL, '_blank', 'noopener');
+    }
+  }
+
+  // ==================== 工具函数 ====================
+  function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+  }
+
+  function getInversionCount(arr) {
+    let count = 0;
+    for (let i = 0; i < arr.length - 1; i++) {
+      for (let j = i + 1; j < arr.length; j++) {
+        if (arr[i] > arr[j]) count++;
+      }
+    }
+    return count;
+  }
+
+  function isSolved() {
+    return gridPositions.every((id, index) => id === index);
+  }
+
+  // ==================== 启动流程 ====================
+  async function startGame() {
+    console.log('[Game] Starting...');
+
+    setTimeout(() => {
+      document.getElementById('loading').classList.add('hide');
+    }, 800);
+
+    await playIntroVideo();
+
+    const gameContainer = document.getElementById('gameContainer');
+    gameContainer.classList.add('active');
+
+    setTimeout(() => {
+      gameContainer.classList.add('show');
+      initPuzzle();
+    }, 100);
+
+    setTimeout(() => {
+      if (audioEnabled) startBGM();
+    }, 500);
+
+    console.log('[Game] Ready');
+  }
+
+  // ==================== 事件监听 ====================
+  document.getElementById('playButton').addEventListener('click', openStore);
+
+  document.getElementById('audioToggle').addEventListener('click', () => {
+    audioEnabled = !audioEnabled;
+    if (audioEnabled) {
+      startBGM();
+    } else {
+      stopBGM();
+    }
+  });
+
+  let firstClick = true;
+  document.addEventListener('click', () => {
+    if (firstClick) {
+      firstClick = false;
+      audioEnabled = true;
+      setTimeout(() => startBGM(), 100);
+    }
+  });
+
+  // ==================== 初始化 ====================
+  window.addEventListener('load', () => {
+    console.log('[Init] App loaded');
+
+    if (typeof ExitApi !== 'undefined') {
+      console.log('[Init] Google ExitApi detected');
+    } else if (!window.mraid) {
+      console.log('[Init] MRAID not available');
+    } else {
+      console.log('[Init] MRAID detected');
+      if (typeof window.mraid.useCustomClose === 'function') {
+        window.mraid.useCustomClose(false);
+      }
+    }
+
+    startGame();
+  });
+
+    // Google UAC渠道要求：锁屏/解锁时的音频控制
+    let wasPlayingBeforeLock = false;
+    let videoWasPlayingBeforeLock = false;
+
+    document.addEventListener('visibilitychange', function() {
+      const introVideo = document.getElementById('introVideo');
+
+      if (document.hidden) {
+        // 页面隐藏（锁屏）- 暂停所有音频
+        if (bgmAudio && !bgmAudio.paused) {
+          wasPlayingBeforeLock = true;
+          bgmAudio.pause();
+        }
+
+        // 暂停视频
+        if (introVideo && !introVideo.paused) {
+          videoWasPlayingBeforeLock = true;
+          introVideo.pause();
+        }
+
+        // 取消语音合成
+        if (speechSynth) {
+          speechSynth.cancel();
+        }
+
+        // 暂停音效
+        if (moveSound && !moveSound.paused) moveSound.pause();
+        if (matchSound && !matchSound.paused) matchSound.pause();
+
+      } else {
+        // 页面显示（解锁）- 恢复音频播放
+        if (wasPlayingBeforeLock && bgmAudio && audioEnabled) {
+          bgmAudio.play().catch(e => console.log('[BGM] Resume failed:', e));
+          wasPlayingBeforeLock = false;
+        }
+
+        // 恢复视频播放
+        if (videoWasPlayingBeforeLock && introVideo) {
+          introVideo.play().catch(e => console.log('[Video] Resume failed:', e));
+          videoWasPlayingBeforeLock = false;
+        }
+      }
+    });
+
+  </script>
+
+</body>
+</html>

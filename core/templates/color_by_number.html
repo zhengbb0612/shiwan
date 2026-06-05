@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="HandheldFriendly" content="True"/>
+<!-- UAC_META_PLACEHOLDER -->
+<title>Playable Ad</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;position:fixed;touch-action:none;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#1a1a2e}
+#game-container{width:100%;height:100%;display:flex;flex-direction:column;position:relative}
+#top-bar{height:48px;background:linear-gradient(135deg,#2d2d44,#1a1a2e);display:flex;align-items:center;padding:0 12px;z-index:10;flex-shrink:0}
+#top-bar .title{color:#fff;font-size:16px;font-weight:700;flex:1}
+#top-bar .progress{color:#aaa;font-size:13px;margin-right:8px}
+#progress-bar{width:100px;height:6px;background:#333;border-radius:3px;overflow:hidden}
+#progress-fill{height:100%;background:linear-gradient(90deg,#00d98b,#00a173);width:0%;transition:width 0.4s ease-out;border-radius:3px}
+#sound-btn{width:36px;height:36px;border:none;background:rgba(255,255,255,0.1);border-radius:50%;color:#fff;font-size:18px;cursor:pointer;margin-left:8px;display:flex;align-items:center;justify-content:center}
+#svg-area{flex:1;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;background:#f0f0f0;padding:0}
+#svg-area svg{max-width:100%;max-height:100%;object-fit:contain}
+#svg-area svg path{stroke:#666;stroke-width:1;transition:fill 0.3s ease;cursor:pointer}
+#svg-area svg path.filled{stroke:#444;stroke-width:0.5}
+#svg-area svg path.block-highlight{stroke:#FFD700;stroke-width:3;filter:drop-shadow(0 0 4px rgba(255,215,0,0.6))}
+#palette-area{height:80px;background:#1a1a2e;display:flex;align-items:center;padding:0 8px;overflow-x:auto;overflow-y:hidden;flex-shrink:0;gap:6px;-webkit-overflow-scrolling:touch}
+#palette-area::-webkit-scrollbar{display:none}
+.color-btn{width:44px;height:44px;min-width:44px;border-radius:50%;border:3px solid transparent;cursor:pointer;position:relative;transition:transform 0.2s,border-color 0.2s}
+.color-btn.active{border-color:#fff;transform:scale(1.2);box-shadow:0 0 12px rgba(255,255,255,0.4)}
+.color-btn .num{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.8)}
+.color-btn.done{opacity:0.4;pointer-events:none}
+.color-btn.done::after{content:'✓';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:18px;color:#fff}
+#cta-btn{height:52px;margin:8px 16px;background:linear-gradient(135deg,#00a173,#00d98b);border:none;border-radius:28px;color:#fff;font-size:18px;font-weight:700;cursor:pointer;flex-shrink:0;animation:pulse 2s ease-in-out infinite;z-index:10}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}
+#hint-hand{position:absolute;font-size:36px;pointer-events:none;z-index:100;opacity:0;transition:opacity 0.3s;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))}
+#hint-hand.visible{opacity:1;animation:bounce 1s ease-in-out infinite}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+#loading-screen{position:absolute;inset:0;background:#1a1a2e;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1000;transition:opacity 0.5s}
+#loading-screen.hidden{opacity:0;pointer-events:none}
+#loading-bar{width:200px;height:6px;background:#333;border-radius:3px;margin-top:20px;overflow:hidden}
+#loading-bar-fill{height:100%;background:linear-gradient(90deg,#00d98b,#00a173);width:0%;border-radius:3px}
+#loading-screen .icon{font-size:48px;margin-bottom:12px}
+#loading-screen .text{color:#fff;font-size:14px}
+#win-screen{position:absolute;inset:0;background:rgba(0,0,0,0.8);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:200}
+#win-screen.show{display:flex}
+#win-screen h2{color:#fff;font-size:28px;margin-bottom:16px}
+#win-screen .stars{font-size:48px;margin-bottom:24px}
+#particles{position:absolute;inset:0;pointer-events:none;z-index:50;overflow:hidden}
+.particle{position:absolute;width:8px;height:8px;border-radius:50%;animation:particleFall 1s ease-out forwards;opacity:0.9}
+@keyframes particleFall{0%{transform:translateY(0) scale(1);opacity:1}100%{transform:translateY(60px) scale(0);opacity:0}}
+#block-indicator{position:absolute;top:56px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:#fff;padding:6px 16px;border-radius:16px;font-size:13px;z-index:20;opacity:0;transition:opacity 0.3s}
+#block-indicator.show{opacity:1}
+</style>
+</head>
+<body>
+<div id="game-container">
+  <div id="loading-screen">
+    <div class="icon">🎨</div>
+    <div class="text">Loading...</div>
+    <div id="loading-bar"><div id="loading-bar-fill"></div></div>
+  </div>
+  <div id="top-bar">
+    <span class="title">🎨 Color by Number</span>
+    <span class="progress"><span id="progress-text">0</span>/<span id="total-blocks">{{NUM_BLOCKS}}</span></span>
+    <div id="progress-bar"><div id="progress-fill"></div></div>
+    <button id="sound-btn">🔊</button>
+  </div>
+  <div id="svg-area">
+    <svg viewBox="{{VIEWBOX}}" xmlns="http://www.w3.org/2000/svg">
+      {{SVG_PATHS}}
+    </svg>
+    <div id="block-indicator"></div>
+  </div>
+  <div id="palette-area">
+    {{PALETTE_HTML}}
+  </div>
+  <button id="cta-btn" onclick="openStore()">🎮 Play Full Game</button>
+  <div id="hint-hand">👆</div>
+  <div id="particles"></div>
+  <div id="win-screen">
+    <h2>🎉 Beautiful!</h2>
+    <div class="stars">⭐⭐⭐</div>
+    <button onclick="openStore()" style="background:linear-gradient(135deg,#00a173,#00d98b);border:none;border-radius:28px;color:#fff;font-size:18px;font-weight:700;padding:14px 48px;cursor:pointer">Play Full Game</button>
+  </div>
+</div>
+<script>
+const CLICK_URL = "STORE_URL_PLACEHOLDER";
+
+function openStore() {
+  try {
+    if (window.mraid && typeof window.mraid.open === 'function') {
+      window.mraid.open(CLICK_URL);
+      return;
+    }
+  } catch (e) {}
+  try {
+    window.open(CLICK_URL, '_blank', 'noopener');
+    return;
+  } catch (e) {}
+  window.location.href = CLICK_URL;
+}
+
+(function() {
+  const GAME_DATA = {{GAME_DATA_JSON}};
+  const palette = GAME_DATA.palette;
+  const blocks = GAME_DATA.blocks;
+  const pathColors = GAME_DATA.pathColors;
+  const numBlocks = blocks.length;
+
+  let selectedColor = -1;
+  let filledBlocks = new Set();
+  let currentBlockIdx = 0;
+  let soundEnabled = true;
+  let hintTimer = null;
+  let gameStarted = false;
+  let audioCtx = null;
+
+  function getAudioCtx() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    return audioCtx;
+  }
+
+  function playPop() {
+    if (!soundEnabled) return;
+    try {
+      const ctx = getAudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.setValueAtTime(600, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.1);
+    } catch(e) {}
+  }
+
+  function playSuccess() {
+    if (!soundEnabled) return;
+    try {
+      const ctx = getAudioCtx();
+      [400, 500, 700].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.1);
+        gain.gain.setValueAtTime(0.2, ctx.currentTime + i * 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * 0.1 + 0.2);
+        osc.start(ctx.currentTime + i * 0.1);
+        osc.stop(ctx.currentTime + i * 0.1 + 0.2);
+      });
+    } catch(e) {}
+  }
+
+  function playCelebration() {
+    if (!soundEnabled) return;
+    try {
+      const ctx = getAudioCtx();
+      [523, 659, 784, 1047].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.15);
+        gain.gain.setValueAtTime(0.25, ctx.currentTime + i * 0.15);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * 0.15 + 0.3);
+        osc.start(ctx.currentTime + i * 0.15);
+        osc.stop(ctx.currentTime + i * 0.15 + 0.3);
+      });
+    } catch(e) {}
+  }
+
+  function emitParticles(x, y, color) {
+    const container = document.getElementById('particles');
+    for (let i = 0; i < 10; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.style.background = color || '#FFD700';
+      p.style.left = (x + (Math.random() - 0.5) * 60) + 'px';
+      p.style.top = (y + (Math.random() - 0.5) * 40) + 'px';
+      p.style.width = (4 + Math.random() * 6) + 'px';
+      p.style.height = p.style.width;
+      container.appendChild(p);
+      setTimeout(() => p.remove(), 1000);
+    }
+  }
+
+  function updateProgress() {
+    const count = filledBlocks.size;
+    document.getElementById('progress-text').textContent = count;
+    document.getElementById('progress-fill').style.width = (count / numBlocks * 100) + '%';
+  }
+
+  function highlightCurrentBlock() {
+    document.querySelectorAll('#svg-area svg path').forEach(p => p.classList.remove('block-highlight'));
+    if (currentBlockIdx < numBlocks && !filledBlocks.has(currentBlockIdx)) {
+      const blockPaths = blocks[currentBlockIdx];
+      blockPaths.forEach(pi => {
+        const el = document.querySelector(`[data-idx="${pi}"]`);
+        if (el && !el.classList.contains('filled')) {
+          el.classList.add('block-highlight');
+        }
+      });
+    }
+  }
+
+  function fillBlock(blockIdx) {
+    if (filledBlocks.has(blockIdx)) return;
+    filledBlocks.add(blockIdx);
+
+    const blockPaths = blocks[blockIdx];
+    blockPaths.forEach((pi, i) => {
+      const el = document.querySelector(`[data-idx="${pi}"]`);
+      if (el) {
+        setTimeout(() => {
+          const colorIdx = pathColors[pi];
+          el.style.fill = palette[colorIdx];
+          el.classList.add('filled');
+          el.classList.remove('block-highlight');
+        }, i * 8);
+      }
+    });
+
+    const svgArea = document.getElementById('svg-area');
+    const rect = svgArea.getBoundingClientRect();
+    emitParticles(rect.left + rect.width / 2, rect.top + rect.height / 2, palette[pathColors[blockPaths[0]]]);
+    playSuccess();
+    updateProgress();
+
+    currentBlockIdx = findNextBlock();
+    setTimeout(() => highlightCurrentBlock(), blockPaths.length * 8 + 100);
+
+    if (filledBlocks.size >= numBlocks) {
+      setTimeout(showWin, 800);
+    }
+
+    resetHintTimer();
+  }
+
+  function findNextBlock() {
+    for (let i = 0; i < numBlocks; i++) {
+      if (!filledBlocks.has(i)) return i;
+    }
+    return numBlocks;
+  }
+
+  function showWin() {
+    playCelebration();
+    document.getElementById('win-screen').classList.add('show');
+    for (let i = 0; i < 30; i++) {
+      setTimeout(() => {
+        emitParticles(
+          Math.random() * window.innerWidth,
+          Math.random() * window.innerHeight * 0.5,
+          ['#FFD700', '#FF6B6B', '#4ECDC4', '#A78BFA', '#F472B6'][Math.floor(Math.random() * 5)]
+        );
+      }, i * 100);
+    }
+  }
+
+  function showHint() {
+    const hand = document.getElementById('hint-hand');
+    if (currentBlockIdx >= numBlocks) return;
+    const blockPaths = blocks[currentBlockIdx];
+    if (!blockPaths || blockPaths.length === 0) return;
+    const midIdx = blockPaths[Math.floor(blockPaths.length / 2)];
+    const el = document.querySelector(`[data-idx="${midIdx}"]`);
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      hand.style.left = (rect.left + rect.width / 2 - 18) + 'px';
+      hand.style.top = (rect.top + rect.height / 2 - 18) + 'px';
+      hand.classList.add('visible');
+    }
+  }
+
+  function hideHint() {
+    document.getElementById('hint-hand').classList.remove('visible');
+  }
+
+  function resetHintTimer() {
+    hideHint();
+    if (hintTimer) clearTimeout(hintTimer);
+    hintTimer = setTimeout(showHint, 4000);
+  }
+
+  function handlePathClick(e) {
+    const target = e.target.closest('path');
+    if (!target) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const idx = parseInt(target.dataset.idx);
+    if (isNaN(idx)) return;
+
+    const blockIdx = parseInt(target.dataset.block);
+    if (filledBlocks.has(blockIdx)) return;
+
+    playPop();
+    fillBlock(blockIdx);
+  }
+
+  function startGame() {
+    const loadingScreen = document.getElementById('loading-screen');
+    loadingScreen.classList.add('hidden');
+    setTimeout(() => { loadingScreen.style.display = 'none'; }, 500);
+    gameStarted = true;
+    currentBlockIdx = findNextBlock();
+    highlightCurrentBlock();
+    resetHintTimer();
+  }
+
+  function init() {
+    const loadingFill = document.getElementById('loading-bar-fill');
+    let progress = 0;
+    const loadInterval = setInterval(() => {
+      progress += Math.random() * 30;
+      if (progress >= 100) {
+        progress = 100;
+        clearInterval(loadInterval);
+        setTimeout(startGame, 300);
+      }
+      loadingFill.style.width = progress + '%';
+    }, 100);
+
+    const svgArea = document.getElementById('svg-area');
+    let handled = false;
+    const handler = (e) => {
+      if (handled) return;
+      handled = true;
+      setTimeout(() => { handled = false; }, 300);
+      handlePathClick(e);
+    };
+    svgArea.addEventListener('touchstart', handler, {passive: false});
+    svgArea.addEventListener('mousedown', handler);
+    svgArea.addEventListener('click', handler);
+
+    document.getElementById('sound-btn').addEventListener('click', function() {
+      soundEnabled = !soundEnabled;
+      this.textContent = soundEnabled ? '🔊' : '🔇';
+    });
+
+    document.querySelectorAll('#svg-area svg path').forEach(p => {
+      p.style.fill = '#e8e8e8';
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

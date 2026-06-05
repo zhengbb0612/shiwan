@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.pyc
+output/
+试玩参考/
+.claude/
+ref_*.js
+ref_*.html
+*.log
+.DS_Store
+.venv/
+venv/

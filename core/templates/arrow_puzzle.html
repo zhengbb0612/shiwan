@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<title>Arrows Puzzle Escape</title>
+<!-- UAC_META_PLACEHOLDER -->
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f2f4f8;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,"PingFang SC","Microsoft YaHei",sans-serif;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+#app{position:relative;width:min(100vw,calc(100vh * 9 / 16));height:min(100vh,calc(100vw * 16 / 9));aspect-ratio:9/16;margin:0 auto;overflow:hidden;background:linear-gradient(180deg,#fbfcfe 0%,#eef1f6 60%,#e4e8f0 100%)}
+#hud{position:absolute;left:0;right:0;top:0;padding:max(env(safe-area-inset-top),10px) 16px 6px;display:flex;justify-content:space-between;align-items:center;gap:8px;z-index:20}
+.hearts{display:flex;gap:5px;align-items:center}
+.heart{font-size:min(6vw,26px);filter:drop-shadow(0 2px 3px rgba(0,0,0,.2));transition:transform .25s,opacity .25s}
+.heart.lost{opacity:.28;transform:scale(.82)}
+.pill{height:40px;border-radius:20px;padding:0 16px;display:flex;align-items:center;justify-content:center;gap:6px;background:#fff;box-shadow:0 5px 14px rgba(40,60,110,.16);border:1px solid rgba(80,110,170,.12);color:#2a3a5c;font-weight:800;font-size:15px}
+.pill b{font-size:18px;color:#4a6cf0}
+.toptip{position:absolute;left:50%;top:8.5%;transform:translateX(-50%);width:90%;text-align:center;color:#3a4a6a;font-weight:900;font-size:min(4.6vw,21px);z-index:18;text-shadow:0 1px 2px rgba(255,255,255,.6)}
+#stage{position:absolute;left:50%;top:53%;transform:translate(-50%,-50%);z-index:10;width:92%;aspect-ratio:1/1;background:#fff;border-radius:20px;box-shadow:0 10px 30px rgba(40,60,110,.16),inset 0 0 0 1px rgba(80,110,170,.1);overflow:hidden}
+#board{position:absolute;inset:0;display:block;width:100%;height:100%;cursor:pointer}
+.tap{position:absolute;width:42px;height:42px;z-index:15;pointer-events:none;filter:drop-shadow(0 3px 5px rgba(0,0,0,.4));opacity:0}
+.tap.show{animation:tapPulse 1.25s ease-in-out infinite}
+@keyframes tapPulse{0%{opacity:1;transform:translate(-28%,-18%) scale(1)}45%{transform:translate(-28%,-18%) scale(.82)}70%,100%{transform:translate(-28%,-18%) scale(1)}}
+.install{position:absolute;left:50%;bottom:3.5%;transform:translateX(-50%);background:linear-gradient(180deg,#5b86ff,#3a5cf0);color:#fff;border:none;border-radius:999px;padding:14px 44px;font-weight:900;font-size:min(5.2vw,23px);z-index:32;box-shadow:0 8px 18px rgba(58,92,240,.45),inset 0 1px 0 rgba(255,255,255,.4);cursor:pointer;animation:ctaPulse 1.3s infinite}
+@keyframes ctaPulse{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.06)}}
+#overlay{position:absolute;inset:0;background:rgba(20,28,48,.5);display:none;align-items:center;justify-content:center;z-index:50}
+.card{width:80%;background:#fff;border-radius:28px;padding:32px 26px;text-align:center;box-shadow:0 22px 50px rgba(0,0,0,.4)}
+.card h1{margin:0 0 8px;color:#2a3a5c;font-size:min(12vw,46px)}
+.card p{margin:0 0 22px;color:#5a6a8c;font-size:min(5vw,22px);font-weight:700;line-height:1.4}
+.bigbtn{border:none;border-radius:999px;background:linear-gradient(180deg,#5b86ff,#3a5cf0);color:#fff;padding:16px 42px;font-size:min(6vw,26px);font-weight:900;cursor:pointer;box-shadow:0 8px 18px rgba(58,92,240,.45);animation:ctaPulse 1.4s infinite}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="hud">
+    <div class="hearts" id="hearts"></div>
+    <div class="pill"><b id="leftValue">0</b><span>left</span></div>
+  </div>
+  <div class="toptip" id="toptip">Tap an arrow to send it out. Clear them all!</div>
+  <div id="stage"><canvas id="board"></canvas></div>
+  <button class="install" id="installBtn">Install</button>
+  <div id="overlay">
+    <div class="card">
+      <h1 id="ovTitle">You Win!</h1>
+      <p id="ovText">Board cleared! Play the full game now.</p>
+      <button class="bigbtn" id="ovBtn">Install</button>
+    </div>
+  </div>
+</div>
+<script>
+var CLICK_URL = "STORE_URL_PLACEHOLDER";
+function openStore(){
+  try{ if(window.mraid && typeof window.mraid.open==='function'){ window.mraid.open(CLICK_URL); return; } }catch(e){}
+  try{ window.open(CLICK_URL,'_blank','noopener'); return; }catch(e){}
+  window.location.href = CLICK_URL;
+}
+
+// ===== audio (synth, no BGM) =====
+var AC=null;
+function actx(){ try{ if(!AC) AC=new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==='suspended') AC.resume(); }catch(e){} return AC; }
+function beep(f,d,t,v){ var c=actx(); if(!c) return; try{ var o=c.createOscillator(),g=c.createGain(); o.type=t||'sine'; o.frequency.value=f; g.gain.value=v||0.12; o.connect(g); g.connect(c.destination); var n=c.currentTime; o.start(n); g.gain.exponentialRampToValueAtTime(0.0001,n+(d||0.12)); o.stop(n+(d||0.12)); }catch(e){} }
+function sfxShoot(){ beep(720,0.08,'triangle',0.12); setTimeout(function(){beep(1040,0.10,'triangle',0.10);},45); }
+function sfxCrash(){ beep(150,0.18,'sawtooth',0.13); }
+function sfxWin(){ [523,659,784,1047].forEach(function(f,i){ setTimeout(function(){beep(f,0.18,'triangle',0.14);},i*120); }); }
+function sfxLose(){ [392,330,262].forEach(function(f,i){ setTimeout(function(){beep(f,0.22,'sawtooth',0.12);},i*150); }); }
+
+// ===== level data injected by generator =====
+// {n, lives, arrows:[{path:[[x,y],...], dir}]}  path[0]=start cell (where arrow sits),
+// remaining cells = movement trajectory (turns expanded), dir = final fly-out dir (0u1r2d3l)
+var LEVEL = /*{{LEVEL_DATA}}*/null;
+var DIRS=[[0,-1],[1,0],[0,1],[-1,0]];
+
+var N, cell, board, solved=false, dead=false;
+var occ={};       // "x,y" -> arrow obj (only the head cell is occupied)
+var arrows=[];
+var remaining=0, lives=5;
+
+function key(x,y){ return x+','+y; }
+
+// ===== Canvas renderer: one canvas draws ALL arrows; only redraw on change. =====
+var ctx, DPR=1, boardCSS=0;
+var needRedraw=true;
+
+function setupCanvas(){
+  var rect=board.getBoundingClientRect();
+  boardCSS=rect.width;
+  DPR=Math.min(window.devicePixelRatio||1, 2);  // cap DPR for perf
+  board.width=Math.round(boardCSS*DPR);
+  board.height=Math.round(boardCSS*DPR);
+  ctx=board.getContext('2d');
+  cell=boardCSS/N;
+  needRedraw=true;
+}
+
+// draw one arrow's body (array of [x,y] cells, head = last) onto ctx
+// ox,oy = pixel offset (for per-arrow shake); col = stroke/fill color
+function drawArrow(pts, dir, ox, oy, col){
+  if(!pts||pts.length===0) return;
+  ox=ox||0; oy=oy||0; col=col||'#111418';
+  var lw=Math.max(6, cell*0.42);
+  ctx.lineWidth=lw; ctx.strokeStyle=col; ctx.fillStyle=col;
+  ctx.lineJoin='round'; ctx.lineCap='round';
+  if(pts.length>1){
+    ctx.beginPath();
+    ctx.moveTo((pts[0][0]+0.5)*cell+ox,(pts[0][1]+0.5)*cell+oy);
+    for(var i=1;i<pts.length;i++){ ctx.lineTo((pts[i][0]+0.5)*cell+ox,(pts[i][1]+0.5)*cell+oy); }
+    ctx.stroke();
+  }
+  var t=pts[0];
+  ctx.beginPath(); ctx.arc((t[0]+0.5)*cell+ox,(t[1]+0.5)*cell+oy,lw*0.62,0,6.2832); ctx.fill();
+  var last=pts[pts.length-1], dx=DIRS[dir][0], dy=DIRS[dir][1];
+  var bx=(last[0]+0.5)*cell+ox, by=(last[1]+0.5)*cell+oy;
+  var ex=bx+dx*cell*0.55, ey=by+dy*cell*0.55, hw=cell*0.46, px=-dy, py=dx;
+  ctx.beginPath();
+  ctx.moveTo(ex,ey); ctx.lineTo(bx+px*hw,by+py*hw); ctx.lineTo(bx-px*hw,by-py*hw);
+  ctx.closePath(); ctx.fill();
+}
+
+function renderAll(){
+  if(!ctx) return;
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.clearRect(0,0,boardCSS,boardCSS);
+  for(var i=0;i<arrows.length;i++){
+    var a=arrows[i];
+    if(a.removed && !a._anim) continue;
+    drawArrow(a._draw||a.path, a.dir, a._sx||0, a._sy||0, a._color);
+  }
+}
+
+// single shared rAF loop: redraws only when something is animating or dirty
+var rafOn=false;
+function tick(){
+  var anyAnim=false;
+  for(var i=0;i<arrows.length;i++){ if(arrows[i]._anim||arrows[i]._shaking){ anyAnim=true; break; } }
+  if(anyAnim || needRedraw){ renderAll(); needRedraw=false; }
+  if(anyAnim){ requestAnimationFrame(tick); rafOn=true; }
+  else { rafOn=false; }
+}
+function kick(){ if(!rafOn){ rafOn=true; requestAnimationFrame(tick); } }
+
+// shake a single arrow in place (canvas offset), then settle
+function shakeArrow(a){
+  a._shaking=true;
+  a._color='#e23b3b';            // turn red to flag the wrong (blocked) arrow
+  var t0=null, dur=420, amp=cell*0.18;
+  function step(ts){
+    if(t0===null) t0=ts;
+    var p=(ts-t0)/dur;
+    if(p>=1){ a._sx=0; a._sy=0; a._shaking=false; a._color=null; needRedraw=true; kick(); return; }
+    a._sx=Math.sin(p*Math.PI*6)*amp*(1-p);
+    a._sy=0;
+    requestAnimationFrame(step);
+  }
+  kick(); requestAnimationFrame(step);
+}
+
+function layout(){ setupCanvas(); renderAll(); }
+
+function buildBoard(){
+  occ={}; arrows=[];
+  for(var i=0;i<LEVEL.arrows.length;i++){
+    var d=LEVEL.arrows[i];
+    var path=d.path; var head=path[path.length-1];
+    var obj={path:path, dir:d.dir, hx:head[0], hy:head[1], removed:false, _anim:false, _draw:null};
+    arrows.push(obj);
+    for(var j=0;j<path.length;j++){ occ[key(path[j][0],path[j][1])]=obj; }
+  }
+  remaining=arrows.length; lives=(LEVEL.lives||5);
+  document.getElementById('leftValue').textContent=remaining;
+  buildHearts();
+  setupCanvas(); renderAll();
+}
+
+function clearOcc(a){ for(var j=0;j<a.path.length;j++){ delete occ[key(a.path[j][0],a.path[j][1])]; } }
+
+function buildHearts(){
+  var h=document.getElementById('hearts'); h.innerHTML='';
+  for(var i=0;i<lives;i++){ var s=document.createElement('span'); s.className='heart'; s.textContent='❤️'; h.appendChild(s); }
+}
+function loseLife(){
+  lives--; var hs=document.getElementById('hearts').children;
+  if(hs[lives]) hs[lives].classList.add('lost');
+  if(lives<=0) lose();
+}
+
+// straight-line collision from head along dir; blocked by any other arrow body cell
+function pathClear(a){
+  var dx=DIRS[a.dir][0], dy=DIRS[a.dir][1];
+  var x=a.hx+dx, y=a.hy+dy;
+  while(x>=0 && x<N && y>=0 && y<N){
+    var o=occ[key(x,y)];
+    if(o && o!==a) return false;
+    x+=dx; y+=dy;
+  }
+  return true;
+}
+
+// distance from point (px,py) to segment (ax,ay)-(bx,by), in grid units
+function distToSeg(px,py,ax,ay,bx,by){
+  var vx=bx-ax, vy=by-ay, wx=px-ax, wy=py-ay;
+  var len2=vx*vx+vy*vy;
+  var t = len2>0 ? ((wx*vx+wy*vy)/len2) : 0;
+  t=Math.max(0,Math.min(1,t));
+  var cx=ax+t*vx, cy=ay+t*vy;
+  var dx=px-cx, dy=py-cy;
+  return Math.sqrt(dx*dx+dy*dy);
+}
+
+// find which arrow a board point hits. Among arrows within tolerance, prefer one
+// whose exit path is currently CLEAR (so a tappable arrow wins over a blocked one
+// lying underneath); otherwise fall back to the geometrically nearest.
+function hitTest(gx, gy){
+  var TOL=0.62;
+  var nearest=null, nearestD=TOL;
+  var clearBest=null, clearBestD=TOL;
+  for(var i=0;i<arrows.length;i++){
+    var a=arrows[i]; if(a.removed||a._anim) continue;
+    var p=a.path, dmin=Infinity;
+    if(p.length===1){
+      var ddx=gx-p[0][0], ddy=gy-p[0][1];
+      dmin=Math.sqrt(ddx*ddx+ddy*ddy);
+    } else {
+      for(var j=0;j<p.length-1;j++){
+        var d=distToSeg(gx,gy, p[j][0],p[j][1], p[j+1][0],p[j+1][1]);
+        if(d<dmin) dmin=d;
+      }
+    }
+    if(dmin<TOL){
+      if(dmin<nearestD){ nearestD=dmin; nearest=a; }
+      if(pathClear(a) && dmin<clearBestD){ clearBestD=dmin; clearBest=a; }
+    }
+  }
+  return clearBest || nearest;
+}
+
+// snake crawl using shared canvas; mutates a._draw each frame, no DOM work
+function crawlOut(a, done){
+  var dx=DIRS[a.dir][0], dy=DIRS[a.dir][1];
+  var route=a.path.map(function(p){return [p[0],p[1]];});
+  var hx=route[route.length-1][0], hy=route[route.length-1][1];
+  var bodyLen=a.path.length;
+  var ext=N+bodyLen+3;
+  for(var k=1;k<=ext;k++){ route.push([hx+dx*k, hy+dy*k]); }
+  var startHead=bodyLen-1, lastIdx=route.length-1;
+  var totalAdvance=(lastIdx+bodyLen)-startHead;
+  var speed=30;
+  var dur=Math.max(220,(totalAdvance/speed)*1000);
+  var t0=null;
+  a._anim=true; kick();
+  function step(ts){
+    if(t0===null) t0=ts;
+    var p=Math.min(1,(ts-t0)/dur);
+    var ci=Math.round(startHead+p*totalAdvance);
+    var tail=ci-bodyLen+1; if(tail<0) tail=0;
+    if(tail>lastIdx || p>=1){
+      a._anim=false; a._draw=null;
+      if(done) done();
+      needRedraw=true; kick();
+      return;
+    }
+    a._draw=route.slice(tail, Math.min(ci,lastIdx)+1);
+    requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function onTapGrid(gx, gy){
+  if(solved||dead) return;
+  var a=hitTest(gx,gy); if(!a) return;
+  if(a._anim) return;            // this arrow already flying; ignore re-taps on it
+  actx(); hideHint();
+  if(!pathClear(a)){
+    // wrong: this specific arrow shakes in place, lose a life
+    sfxCrash(); shakeArrow(a); loseLife();
+    return;
+  }
+  // multiple arrows may fly out at once; each animates independently
+  sfxShoot();
+  a._color='#3a7bff';            // turn blue: correct arrow flying out
+  clearOcc(a);
+  a.removed=true; remaining--;
+  document.getElementById('leftValue').textContent=remaining;
+  crawlOut(a, function(){
+    if(remaining<=0) win();
+  });
+}
+
+function win(){ if(solved||dead) return; solved=true; sfxWin(); endShow('You Win!','Board cleared! Play the full game now.'); }
+function lose(){ if(solved||dead) return; dead=true; sfxLose(); endShow('Out of Lives!','So close! Try the full game now.'); }
+function endShow(t,p){ document.getElementById('ovTitle').textContent=t; document.getElementById('ovText').textContent=p; setTimeout(function(){ document.getElementById('overlay').style.display='flex'; },420); }
+
+// ===== first-time hint =====
+var hintEl=null;
+function findHintArrow(){
+  for(var i=0;i<arrows.length;i++){ var a=arrows[i]; if(!a.removed && pathClear(a)) return a; }
+  return null;
+}
+function showHint(){
+  if(hintEl||solved||dead) return;
+  var a=findHintArrow(); if(!a) return;
+  hintEl=document.createElement('div'); hintEl.className='tap show';
+  hintEl.innerHTML='<svg viewBox="0 0 24 24" width="42" height="42" xmlns="http://www.w3.org/2000/svg"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11l1-4.2a1.4 1.4 0 0 1 2.75.6L15 11.5l1.4-2.6a1.3 1.3 0 0 1 2.4.95l-.9 5.6c-.5 3.1-2.5 5-5.7 5-2.6 0-4-1-5.5-3L4.4 13.6a1.4 1.4 0 0 1 2-1.9L9 13.5z" fill="#fff" stroke="#2a3a5c" stroke-width="1" stroke-linejoin="round"/></svg>';
+  hintEl.style.left=(a.hx*cell+cell*0.45)+'px'; hintEl.style.top=(a.hy*cell+cell*0.45)+'px';
+  document.getElementById('stage').appendChild(hintEl);
+}
+function hideHint(){ if(hintEl&&hintEl.parentNode) hintEl.parentNode.removeChild(hintEl); hintEl=null; }
+
+var _inited=false;
+function init(){
+  if(_inited) return; _inited=true;
+  board=document.getElementById('board');
+  document.getElementById('installBtn').onclick=openStore;
+  document.getElementById('ovBtn').onclick=openStore;
+  if(!LEVEL){ LEVEL={n:8,lives:5,arrows:[{path:[[0,0]],dir:1},{path:[[2,2],[2,1]],dir:0}]}; }
+  N=LEVEL.n;
+  buildBoard();
+  // pointer handling (mouse + touch) mapped to grid coords; pointerdown = instant
+  function pt(ev){
+    var r=board.getBoundingClientRect();
+    var c=(ev.touches&&ev.touches[0])||ev;
+    return [ (c.clientX-r.left)/cell - 0.5, (c.clientY-r.top)/cell - 0.5 ];
+  }
+  function handle(ev){ ev.preventDefault(); var g=pt(ev); onTapGrid(g[0],g[1]); }
+  if(window.PointerEvent){
+    board.addEventListener('pointerdown', handle);
+  } else {
+    board.addEventListener('touchstart', handle, {passive:false});
+    board.addEventListener('mousedown', handle);
+  }
+  window.addEventListener('resize', layout);
+  setTimeout(showHint,700);
+}
+window.addEventListener('load',init);
+if(document.readyState==='complete') init();
+</script>
+</body>
+</html>
