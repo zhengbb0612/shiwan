@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<title>Water Sort Puzzle</title>
+<!-- UAC_META_PLACEHOLDER -->
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0a0f1c;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,"PingFang SC","Microsoft YaHei",sans-serif;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+#app{position:relative;width:min(100vw,calc(100vh * 9 / 16));height:min(100vh,calc(100vw * 16 / 9));aspect-ratio:9/16;margin:0 auto;overflow:hidden;background:radial-gradient(130% 90% at 50% 8%,#1b2c4d 0%,#111a30 48%,#070b16 100%)}
+#hud{position:absolute;left:0;right:0;top:0;padding:max(env(safe-area-inset-top),10px) 16px 6px;display:flex;justify-content:space-between;align-items:center;gap:8px;z-index:20}
+.pill{height:40px;border-radius:20px;padding:0 16px;display:flex;align-items:center;gap:7px;background:linear-gradient(180deg,rgba(50,80,140,.95),rgba(24,40,72,.96));box-shadow:0 6px 16px rgba(0,0,0,.4),inset 0 1px 0 rgba(150,200,255,.32);border:1px solid rgba(120,170,255,.25);color:#eaf2ff;font-weight:800;font-size:15px}
+.pill b{font-size:18px;color:#7fe9ff}
+.toptip{position:absolute;left:50%;top:8.5%;transform:translateX(-50%);width:90%;text-align:center;color:#cfe2ff;font-weight:900;font-size:min(4.8vw,22px);z-index:18;text-shadow:0 2px 8px rgba(0,0,0,.6)}
+#tubes{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);display:flex;flex-wrap:wrap;align-content:center;justify-content:center;gap:4.5%;padding:0 6%;z-index:10}
+.tube{position:relative;width:13%;aspect-ratio:1/3.4;cursor:pointer;transition:transform .18s}
+.tube.sel{transform:translateY(-10%)}
+.glass{position:absolute;inset:0;border:3px solid rgba(180,210,255,.55);border-top:none;border-radius:6px 6px 22px 22px;background:rgba(255,255,255,.05);overflow:hidden;box-shadow:inset 0 0 12px rgba(120,170,255,.18)}
+.lip{position:absolute;left:-3px;right:-3px;top:-4px;height:4px;border-radius:3px;background:rgba(180,210,255,.55)}
+.seg{position:absolute;left:0;right:0;transition:height .18s ease, bottom .18s ease}
+.install{position:absolute;left:50%;bottom:4%;transform:translateX(-50%);background:linear-gradient(180deg,#42d977,#1faa4a);color:#fff;border:none;border-radius:999px;padding:15px 46px;font-weight:900;font-size:min(5.4vw,24px);z-index:32;box-shadow:0 8px 18px rgba(30,160,70,.55),inset 0 1px 0 rgba(255,255,255,.5);cursor:pointer;animation:ctaPulse 1.3s infinite}
+@keyframes ctaPulse{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.06)}}
+.tap{position:absolute;width:42px;height:42px;z-index:25;pointer-events:none;filter:drop-shadow(0 3px 5px rgba(0,0,0,.5));opacity:0}
+.tap.show{animation:tapPulse 1.2s ease-in-out infinite}
+@keyframes tapPulse{0%{opacity:1;transform:translate(-30%,-15%) scale(1)}45%{transform:translate(-30%,-15%) scale(.82)}70%,100%{transform:translate(-30%,-15%) scale(1)}}
+#overlay{position:absolute;inset:0;background:rgba(6,10,20,.66);display:none;align-items:center;justify-content:center;z-index:50}
+.card{width:80%;background:linear-gradient(180deg,#eef6ff,#d6e6ff);border-radius:28px;padding:32px 26px;text-align:center;box-shadow:0 22px 50px rgba(0,0,0,.55)}
+.card h1{margin:0 0 8px;color:#16407a;font-size:min(12vw,46px)}
+.card p{margin:0 0 22px;color:#37598c;font-size:min(5vw,22px);font-weight:700;line-height:1.4}
+.bigbtn{border:none;border-radius:999px;background:linear-gradient(180deg,#42d977,#1faa4a);color:#fff;padding:16px 42px;font-size:min(6vw,26px);font-weight:900;cursor:pointer;box-shadow:0 8px 18px rgba(30,160,70,.55);animation:ctaPulse 1.4s infinite}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="hud">
+    <div class="pill"><span>🧪</span><span>Water Sort</span></div>
+    <div class="pill"><b id="moveValue">0</b><span>moves</span></div>
+  </div>
+  <div class="toptip" id="toptip">Tap a bottle, then another to pour. Sort each color!</div>
+  <div id="tubes"></div>
+  <button class="install" id="installBtn">Install</button>
+  <div id="overlay">
+    <div class="card">
+      <h1>You Win!</h1>
+      <p>All sorted! Play the full game now.</p>
+      <button class="bigbtn" id="ovBtn">Install</button>
+    </div>
+  </div>
+</div>
+<script>
+var CLICK_URL = "STORE_URL_PLACEHOLDER";
+function openStore(){
+  try{ if(window.mraid && typeof window.mraid.open==='function'){ window.mraid.open(CLICK_URL); return; } }catch(e){}
+  try{ window.open(CLICK_URL,'_blank','noopener'); return; }catch(e){}
+  window.location.href = CLICK_URL;
+}
+
+var AC=null;
+function actx(){ try{ if(!AC) AC=new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==='suspended') AC.resume(); }catch(e){} return AC; }
+function beep(f,d,t,v){ var c=actx(); if(!c) return; try{ var o=c.createOscillator(),g=c.createGain(); o.type=t||'sine'; o.frequency.value=f; g.gain.value=v||0.12; o.connect(g); g.connect(c.destination); var n=c.currentTime; o.start(n); g.gain.exponentialRampToValueAtTime(0.0001,n+(d||0.12)); o.stop(n+(d||0.12)); }catch(e){} }
+function sfxPour(){ beep(440,0.1,'sine',0.1); setTimeout(function(){beep(620,0.12,'sine',0.09);},80); }
+function sfxBad(){ beep(160,0.14,'sawtooth',0.1); }
+function sfxDone(){ beep(720,0.1,'triangle',0.12); }
+function sfxWin(){ [523,659,784,1047].forEach(function(f,i){ setTimeout(function(){beep(f,0.18,'triangle',0.14);},i*120); }); }
+
+// ===== level: {cap, colors:[hex...], tubes:[[bottom..top color idx], ...]} =====
+var LEVEL = /*{{LEVEL_DATA}}*/null;
+var CAP, COLORS, tubes=[], els=[], sel=-1, moves=0, solved=false, busy=false;
+
+function buildTubes(){
+  var wrap=document.getElementById('tubes'); wrap.innerHTML=''; els=[];
+  for(var i=0;i<tubes.length;i++){
+    var t=document.createElement('div'); t.className='tube';
+    var g=document.createElement('div'); g.className='glass';
+    var lip=document.createElement('div'); lip.className='lip';
+    t.appendChild(lip); t.appendChild(g);
+    (function(idx){ t.addEventListener('click',function(){ onTube(idx); }); })(i);
+    wrap.appendChild(t); els.push({tube:t,glass:g});
+  }
+  renderAll();
+}
+
+function renderTube(i){
+  var g=els[i].glass; g.innerHTML='';
+  var stack=tubes[i];
+  var unit=100/CAP;
+  for(var k=0;k<stack.length;k++){
+    var s=document.createElement('div'); s.className='seg';
+    s.style.background=COLORS[stack[k]];
+    s.style.height=unit+'%';
+    s.style.bottom=(k*unit)+'%';
+    g.appendChild(s);
+  }
+}
+function renderAll(){ for(var i=0;i<tubes.length;i++) renderTube(i); }
+
+function topColor(st){ return st.length? st[st.length-1] : -1; }
+function topRun(st){ if(!st.length) return 0; var c=st[st.length-1],n=0; for(var i=st.length-1;i>=0;i--){ if(st[i]===c) n++; else break; } return n; }
+
+function canPour(a,b){
+  if(a===b) return false;
+  var A=tubes[a], B=tubes[b];
+  if(!A.length) return false;
+  if(B.length>=CAP) return false;
+  if(B.length===0) return true;
+  return topColor(A)===topColor(B);
+}
+function doPour(a,b){
+  var A=tubes[a], B=tubes[b];
+  var c=topColor(A), n=Math.min(topRun(A), CAP-B.length);
+  for(var i=0;i<n;i++){ A.pop(); B.push(c); }
+  return n;
+}
+
+function isTubeDone(st){ if(st.length===0) return true; if(st.length!==CAP) return false; for(var i=1;i<st.length;i++) if(st[i]!==st[0]) return false; return true; }
+function checkWin(){ for(var i=0;i<tubes.length;i++){ if(!isTubeDone(tubes[i])) return false; } return true; }
+
+function onTube(i){
+  if(busy||solved) return;
+  actx(); hideHint();
+  if(sel<0){
+    if(tubes[i].length===0) return;
+    sel=i; els[i].tube.classList.add('sel'); return;
+  }
+  if(sel===i){ els[i].tube.classList.remove('sel'); sel=-1; return; }
+  if(canPour(sel,i)){
+    var from=sel; els[from].tube.classList.remove('sel'); sel=-1;
+    busy=true; doPour(from,i); sfxPour(); moves++;
+    document.getElementById('moveValue').textContent=moves;
+    renderTube(from); renderTube(i);
+    setTimeout(function(){
+      busy=false;
+      if(isTubeDone(tubes[i]) && tubes[i].length) sfxDone();
+      if(checkWin()) win();
+    },210);
+  } else {
+    sfxBad();
+    els[sel].tube.classList.remove('sel');
+    // reselect the new tube if it has liquid
+    if(tubes[i].length){ sel=i; els[i].tube.classList.add('sel'); } else { sel=-1; }
+  }
+}
+
+function win(){ if(solved) return; solved=true; sfxWin(); setTimeout(function(){ document.getElementById('overlay').style.display='flex'; },360); }
+
+// hint: find a valid pour, point at the source tube
+var hintEl=null;
+function findHint(){
+  for(var a=0;a<tubes.length;a++){ for(var b=0;b<tubes.length;b++){
+    if(canPour(a,b)){ // avoid pointless pour into same-color full-ish: still ok for hint
+      return a;
+    }
+  }}
+  return -1;
+}
+function showHint(){
+  if(hintEl||solved) return;
+  var a=findHint(); if(a<0) return;
+  hintEl=document.createElement('div'); hintEl.className='tap show';
+  hintEl.innerHTML='<svg viewBox="0 0 24 24" width="42" height="42" xmlns="http://www.w3.org/2000/svg"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11l1-4.2a1.4 1.4 0 0 1 2.75.6L15 11.5l1.4-2.6a1.3 1.3 0 0 1 2.4.95l-.9 5.6c-.5 3.1-2.5 5-5.7 5-2.6 0-4-1-5.5-3L4.4 13.6a1.4 1.4 0 0 1 2-1.9L9 13.5z" fill="#fff" stroke="#16407a" stroke-width="1" stroke-linejoin="round"/></svg>';
+  var r=els[a].tube.getBoundingClientRect(), ar=document.getElementById('app').getBoundingClientRect();
+  hintEl.style.left=(r.left-ar.left+r.width*0.5)+'px';
+  hintEl.style.top=(r.top-ar.top+r.height*0.5)+'px';
+  document.getElementById('app').appendChild(hintEl);
+}
+function hideHint(){ if(hintEl&&hintEl.parentNode) hintEl.parentNode.removeChild(hintEl); hintEl=null; }
+
+var _inited=false;
+function init(){
+  if(_inited) return; _inited=true;
+  document.getElementById('installBtn').onclick=openStore;
+  document.getElementById('ovBtn').onclick=openStore;
+  if(!LEVEL){ LEVEL={cap:4,colors:['#ff5d5d','#5db0ff','#ffd14d','#5de8a0'],tubes:[[0,1,0,1],[1,0,1,0],[2,3,2,3],[3,2,3,2],[],[]]}; }
+  CAP=LEVEL.cap; COLORS=LEVEL.colors; tubes=LEVEL.tubes.map(function(t){return t.slice();});
+  buildTubes();
+  setTimeout(showHint,800);
+}
+window.addEventListener('load',init);
+if(document.readyState==='complete') init();
+</script>
+</body>
+</html>
