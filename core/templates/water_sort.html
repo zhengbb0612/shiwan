@@ -6,37 +6,55 @@
 <title>Water Sort Puzzle</title>
 <!-- UAC_META_PLACEHOLDER -->
 <style>
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0a0f1c;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,"PingFang SC","Microsoft YaHei",sans-serif;touch-action:manipulation;-webkit-user-select:none;user-select:none}
-#app{position:relative;width:min(100vw,calc(100vh * 9 / 16));height:min(100vh,calc(100vw * 16 / 9));aspect-ratio:9/16;margin:0 auto;overflow:hidden;background:radial-gradient(130% 90% at 50% 8%,#1b2c4d 0%,#111a30 48%,#070b16 100%)}
-#hud{position:absolute;left:0;right:0;top:0;padding:max(env(safe-area-inset-top),10px) 16px 6px;display:flex;justify-content:space-between;align-items:center;gap:8px;z-index:20}
-.pill{height:40px;border-radius:20px;padding:0 16px;display:flex;align-items:center;gap:7px;background:linear-gradient(180deg,rgba(50,80,140,.95),rgba(24,40,72,.96));box-shadow:0 6px 16px rgba(0,0,0,.4),inset 0 1px 0 rgba(150,200,255,.32);border:1px solid rgba(120,170,255,.25);color:#eaf2ff;font-weight:800;font-size:15px}
-.pill b{font-size:18px;color:#7fe9ff}
-.toptip{position:absolute;left:50%;top:8.5%;transform:translateX(-50%);width:90%;text-align:center;color:#cfe2ff;font-weight:900;font-size:min(4.8vw,22px);z-index:18;text-shadow:0 2px 8px rgba(0,0,0,.6)}
-#tubes{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);display:flex;flex-wrap:wrap;align-content:center;justify-content:center;gap:4.5%;padding:0 6%;z-index:10}
-.tube{position:relative;width:13%;aspect-ratio:1/3.4;cursor:pointer;transition:transform .18s}
-.tube.sel{transform:translateY(-10%)}
-.glass{position:absolute;inset:0;border:3px solid rgba(180,210,255,.55);border-top:none;border-radius:6px 6px 22px 22px;background:rgba(255,255,255,.05);overflow:hidden;box-shadow:inset 0 0 12px rgba(120,170,255,.18)}
-.lip{position:absolute;left:-3px;right:-3px;top:-4px;height:4px;border-radius:3px;background:rgba(180,210,255,.55)}
-.seg{position:absolute;left:0;right:0;transition:height .18s ease, bottom .18s ease}
-.install{position:absolute;left:50%;bottom:4%;transform:translateX(-50%);background:linear-gradient(180deg,#42d977,#1faa4a);color:#fff;border:none;border-radius:999px;padding:15px 46px;font-weight:900;font-size:min(5.4vw,24px);z-index:32;box-shadow:0 8px 18px rgba(30,160,70,.55),inset 0 1px 0 rgba(255,255,255,.5);cursor:pointer;animation:ctaPulse 1.3s infinite}
-@keyframes ctaPulse{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.06)}}
-.tap{position:absolute;width:42px;height:42px;z-index:25;pointer-events:none;filter:drop-shadow(0 3px 5px rgba(0,0,0,.5));opacity:0}
-.tap.show{animation:tapPulse 1.2s ease-in-out infinite}
-@keyframes tapPulse{0%{opacity:1;transform:translate(-30%,-15%) scale(1)}45%{transform:translate(-30%,-15%) scale(.82)}70%,100%{transform:translate(-30%,-15%) scale(1)}}
-#overlay{position:absolute;inset:0;background:rgba(6,10,20,.66);display:none;align-items:center;justify-content:center;z-index:50}
-.card{width:80%;background:linear-gradient(180deg,#eef6ff,#d6e6ff);border-radius:28px;padding:32px 26px;text-align:center;box-shadow:0 22px 50px rgba(0,0,0,.55)}
-.card h1{margin:0 0 8px;color:#16407a;font-size:min(12vw,46px)}
-.card p{margin:0 0 22px;color:#37598c;font-size:min(5vw,22px);font-weight:700;line-height:1.4}
-.bigbtn{border:none;border-radius:999px;background:linear-gradient(180deg,#42d977,#1faa4a);color:#fff;padding:16px 42px;font-size:min(6vw,26px);font-weight:900;cursor:pointer;box-shadow:0 8px 18px rgba(30,160,70,.55);animation:ctaPulse 1.4s infinite}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0a0f1c;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+#app{position:relative;width:min(100vw,calc(100vh*9/16));height:min(100vh,calc(100vw*16/9));aspect-ratio:9/16;margin:0 auto;overflow:hidden;background:linear-gradient(175deg,#1a3a5c 0%,#0f2440 30%,#0a1628 70%,#060d1a 100%)}
+
+#hud{position:absolute;left:0;right:0;top:0;padding:max(env(safe-area-inset-top),12px) 14px 6px;display:flex;justify-content:space-between;align-items:center;z-index:20}
+.pill{height:38px;border-radius:19px;padding:0 14px;display:flex;align-items:center;gap:6px;background:linear-gradient(180deg,rgba(40,70,130,.92),rgba(20,35,65,.94));box-shadow:0 4px 14px rgba(0,0,0,.35),inset 0 1px 0 rgba(140,190,250,.28);border:1px solid rgba(110,160,240,.2);color:#dce8ff;font-weight:700;font-size:14px}
+.pill b{font-size:17px;color:#7fe9ff}
+
+#toptip{position:absolute;left:50%;top:9%;transform:translateX(-50%);width:88%;text-align:center;color:#b8d4ff;font-weight:700;font-size:min(5vw,22px);z-index:18;text-shadow:0 2px 6px rgba(0,0,0,.5);transition:opacity .3s}
+
+#tubes{position:absolute;left:0;right:0;top:50%;transform:translateY(-52%);display:flex;flex-wrap:wrap;align-content:center;justify-content:center;gap:clamp(10px,5vw,22px) clamp(6px,3.5vw,16px);padding:0 8%;z-index:10}
+
+.tube{position:relative;width:clamp(52px,13vw,72px);aspect-ratio:1/3.2;cursor:pointer;transition:transform .18s ease}
+.tube.sel{transform:translateY(-12%) scale(1.04)}
+.tube.sel .glass{box-shadow:inset 0 0 18px rgba(140,200,255,.22),0 0 20px rgba(140,200,255,.35)}
+.tube.done .glass{border-color:rgba(100,220,140,.6);box-shadow:inset 0 0 14px rgba(100,220,140,.15)}
+
+.glass{position:absolute;inset:0;border:3px solid rgba(160,200,240,.5);border-top:none;border-radius:8px 8px 28px 28px;background:rgba(255,255,255,.04);overflow:hidden;box-shadow:inset 0 0 14px rgba(100,150,220,.12);transition:border-color .3s,box-shadow .3s}
+/* glass highlight */
+.glass::after{content:'';position:absolute;left:3px;right:50%;top:2px;bottom:2px;background:linear-gradient(90deg,rgba(255,255,255,.12),rgba(255,255,255,.01));border-radius:6px 0 24px 0;z-index:2;pointer-events:none}
+.lip{position:absolute;left:-3px;right:-3px;top:-3px;height:4px;border-radius:2px;background:rgba(170,210,245,.5);z-index:1}
+
+.seg{position:absolute;left:1px;right:1px;transition:height .2s ease-out,bottom .2s ease-out}
+/* bubble effect within liquid */
+.seg::after{content:'';position:absolute;left:15%;top:12%;width:30%;height:25%;background:rgba(255,255,255,.18);border-radius:50%}
+
+.install{position:absolute;left:50%;bottom:max(env(safe-area-inset-bottom),12px);transform:translateX(-50%);background:linear-gradient(180deg,#4ae07b,#1fb84a);color:#fff;border:none;border-radius:999px;padding:14px 44px;font-weight:800;font-size:min(5.2vw,22px);z-index:32;box-shadow:0 8px 20px rgba(24,160,60,.5),inset 0 1px 0 rgba(255,255,255,.45);cursor:pointer;letter-spacing:.02em;animation:ctaPulse 1.4s infinite}
+
+@keyframes ctaPulse{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.05)}}
+
+.pour-overlay{position:absolute;border-radius:50%;background:currentColor;opacity:.7;z-index:15;pointer-events:none;transition:all .2s ease-out}
+
+.tap{position:absolute;width:40px;height:40px;z-index:25;pointer-events:none;filter:drop-shadow(0 3px 5px rgba(0,0,0,.5));opacity:0}
+.tap.show{animation:tapBounce 1s ease-in-out infinite}
+@keyframes tapBounce{0%{opacity:1;transform:translate(-30%,-20%) scale(1)}40%{opacity:.7;transform:translate(-30%,-20%) scale(.78)}70%,100%{opacity:1;transform:translate(-30%,-20%) scale(1)}}
+
+#overlay{position:absolute;inset:0;background:rgba(4,8,18,.7);display:none;align-items:center;justify-content:center;z-index:50;backdrop-filter:blur(4px)}
+.card{width:82%;background:linear-gradient(180deg,#f0f7ff,#cfe0ff);border-radius:26px;padding:30px 24px;text-align:center;box-shadow:0 20px 48px rgba(0,0,0,.5)}
+.card h1{margin:0 0 6px;color:#0f3a6e;font-size:min(11vw,42px);font-weight:900}
+.card p{margin:0 0 20px;color:#3a6090;font-size:min(5vw,20px);font-weight:600;line-height:1.35}
+.bigbtn{border:none;border-radius:999px;background:linear-gradient(180deg,#4ae07b,#1fb84a);color:#fff;padding:15px 40px;font-size:min(5.5vw,24px);font-weight:800;cursor:pointer;box-shadow:0 8px 18px rgba(24,160,60,.5);letter-spacing:.02em}
 </style>
 </head>
 <body>
 <div id="app">
   <div id="hud">
-    <div class="pill"><span>🧪</span><span>Water Sort</span></div>
-    <div class="pill"><b id="moveValue">0</b><span>moves</span></div>
+    <div class="pill">🧪 Water Sort</div>
+    <div class="pill"><b id="moveValue">0</b> moves</div>
   </div>
-  <div class="toptip" id="toptip">Tap a bottle, then another to pour. Sort each color!</div>
+  <div id="toptip">Tap a bottle to pick, then tap another to pour</div>
   <div id="tubes"></div>
   <button class="install" id="installBtn">Install</button>
   <div id="overlay">
@@ -57,15 +75,27 @@ function openStore(){
 
 var AC=null;
 function actx(){ try{ if(!AC) AC=new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==='suspended') AC.resume(); }catch(e){} return AC; }
-function beep(f,d,t,v){ var c=actx(); if(!c) return; try{ var o=c.createOscillator(),g=c.createGain(); o.type=t||'sine'; o.frequency.value=f; g.gain.value=v||0.12; o.connect(g); g.connect(c.destination); var n=c.currentTime; o.start(n); g.gain.exponentialRampToValueAtTime(0.0001,n+(d||0.12)); o.stop(n+(d||0.12)); }catch(e){} }
-function sfxPour(){ beep(440,0.1,'sine',0.1); setTimeout(function(){beep(620,0.12,'sine',0.09);},80); }
-function sfxBad(){ beep(160,0.14,'sawtooth',0.1); }
-function sfxDone(){ beep(720,0.1,'triangle',0.12); }
-function sfxWin(){ [523,659,784,1047].forEach(function(f,i){ setTimeout(function(){beep(f,0.18,'triangle',0.14);},i*120); }); }
+function beep(f,d,t,v){ var c=actx(); if(!c) return; try{ var o=c.createOscillator(),g=c.createGain(); o.type=t||'sine'; o.frequency.value=f; g.gain.value=v||0.1; o.connect(g); g.connect(c.destination); var n=c.currentTime; o.start(n); g.gain.exponentialRampToValueAtTime(0.0001,n+d); o.stop(n+d); }catch(e){} }
+function sfxSelect(){ beep(520,0.08,'sine',0.08); }
+function sfxPour(){ beep(380,0.1,'sine',0.08); setTimeout(function(){beep(560,0.1,'sine',0.08);},70); }
+function sfxBad(){ beep(140,0.12,'sawtooth',0.08); }
+function sfxDone(){ beep(680,0.1,'triangle',0.1); }
+function sfxWin(){ [523,659,784,1047].forEach(function(f,i){ setTimeout(function(){beep(f,0.2,'triangle',0.12);},i*100); }); }
 
-// ===== level: {cap, colors:[hex...], tubes:[[bottom..top color idx], ...]} =====
 var LEVEL = /*{{LEVEL_DATA}}*/null;
 var CAP, COLORS, tubes=[], els=[], sel=-1, moves=0, solved=false, busy=false;
+var pourAnimId=null;
+
+// Spawn small splashes from a tube position when liquid moves
+function splash(x,y,color){
+  for(var i=0;i<6;i++){
+    var d=document.createElement('div');
+    d.style.cssText='position:absolute;width:5px;height:5px;border-radius:50%;background:'+color+';left:'+x+'px;top:'+y+'px;z-index:30;pointer-events:none;opacity:.9';
+    document.getElementById('app').appendChild(d);
+    var dx=(Math.random()-.5)*50, dy=(Math.random()-.5)*30-15;
+    d.animate([{transform:'translate(0,0) scale(1)',opacity:.9},{transform:'translate('+dx+'px,'+dy+'px) scale(0)',opacity:0}],{duration:400+Math.random()*200,easing:'ease-out'}).onfinish=function(){d.remove()};
+  }
+}
 
 function buildTubes(){
   var wrap=document.getElementById('tubes'); wrap.innerHTML=''; els=[];
@@ -75,15 +105,16 @@ function buildTubes(){
     var lip=document.createElement('div'); lip.className='lip';
     t.appendChild(lip); t.appendChild(g);
     (function(idx){ t.addEventListener('click',function(){ onTube(idx); }); })(i);
+    t.addEventListener('pointerdown',function(e){ e.preventDefault(); });
     wrap.appendChild(t); els.push({tube:t,glass:g});
   }
   renderAll();
 }
 
 function renderTube(i){
-  var g=els[i].glass; g.innerHTML='';
-  var stack=tubes[i];
-  var unit=100/CAP;
+  var g=els[i].glass,stack=tubes[i],unit=100/CAP;
+  // clear children except the glass::after pseudo
+  while(g.firstChild) g.firstChild.remove();
   for(var k=0;k<stack.length;k++){
     var s=document.createElement('div'); s.className='seg';
     s.style.background=COLORS[stack[k]];
@@ -91,6 +122,8 @@ function renderTube(i){
     s.style.bottom=(k*unit)+'%';
     g.appendChild(s);
   }
+  if(isTubeDone(tubes[i])&&tubes[i].length) els[i].tube.classList.add('done');
+  else els[i].tube.classList.remove('done');
 }
 function renderAll(){ for(var i=0;i<tubes.length;i++) renderTube(i); }
 
@@ -120,36 +153,37 @@ function onTube(i){
   actx(); hideHint();
   if(sel<0){
     if(tubes[i].length===0) return;
-    sel=i; els[i].tube.classList.add('sel'); return;
+    sel=i; els[i].tube.classList.add('sel'); sfxSelect(); return;
   }
   if(sel===i){ els[i].tube.classList.remove('sel'); sel=-1; return; }
   if(canPour(sel,i)){
-    var from=sel; els[from].tube.classList.remove('sel'); sel=-1;
-    busy=true; doPour(from,i); sfxPour(); moves++;
+    var from=sel,to=i;
+    els[from].tube.classList.remove('sel'); sel=-1;
+    busy=true;
+    var count=doPour(from,to); sfxPour(); moves++;
     document.getElementById('moveValue').textContent=moves;
-    renderTube(from); renderTube(i);
+    renderTube(from); renderTube(to);
+    // splash effect
+    var tr=els[to].tube.getBoundingClientRect(), ar=document.getElementById('app').getBoundingClientRect();
+    splash(tr.left-ar.left+tr.width/2, tr.top-ar.top+tr.height*(1-count/CAP), COLORS[topColor(tubes[to])]);
     setTimeout(function(){
       busy=false;
-      if(isTubeDone(tubes[i]) && tubes[i].length) sfxDone();
+      if(isTubeDone(tubes[to])&&tubes[to].length) sfxDone();
       if(checkWin()) win();
-    },210);
+    },220);
   } else {
     sfxBad();
     els[sel].tube.classList.remove('sel');
-    // reselect the new tube if it has liquid
     if(tubes[i].length){ sel=i; els[i].tube.classList.add('sel'); } else { sel=-1; }
   }
 }
 
-function win(){ if(solved) return; solved=true; sfxWin(); setTimeout(function(){ document.getElementById('overlay').style.display='flex'; },360); }
+function win(){ if(solved) return; solved=true; sfxWin(); setTimeout(function(){ document.getElementById('overlay').style.display='flex'; },400); }
 
-// hint: find a valid pour, point at the source tube
 var hintEl=null;
 function findHint(){
   for(var a=0;a<tubes.length;a++){ for(var b=0;b<tubes.length;b++){
-    if(canPour(a,b)){ // avoid pointless pour into same-color full-ish: still ok for hint
-      return a;
-    }
+    if(canPour(a,b)) return a;
   }}
   return -1;
 }
@@ -157,10 +191,10 @@ function showHint(){
   if(hintEl||solved) return;
   var a=findHint(); if(a<0) return;
   hintEl=document.createElement('div'); hintEl.className='tap show';
-  hintEl.innerHTML='<svg viewBox="0 0 24 24" width="42" height="42" xmlns="http://www.w3.org/2000/svg"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11l1-4.2a1.4 1.4 0 0 1 2.75.6L15 11.5l1.4-2.6a1.3 1.3 0 0 1 2.4.95l-.9 5.6c-.5 3.1-2.5 5-5.7 5-2.6 0-4-1-5.5-3L4.4 13.6a1.4 1.4 0 0 1 2-1.9L9 13.5z" fill="#fff" stroke="#16407a" stroke-width="1" stroke-linejoin="round"/></svg>';
+  hintEl.innerHTML='<svg viewBox="0 0 24 24" width="40" height="40"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11l1-4.2a1.4 1.4 0 0 1 2.75.6L15 11.5l1.4-2.6a1.3 1.3 0 0 1 2.4.95l-.9 5.6c-.5 3.1-2.5 5-5.7 5-2.6 0-4-1-5.5-3L4.4 13.6a1.4 1.4 0 0 1 2-1.9L9 13.5z" fill="#fff" stroke="#1a4a8a" stroke-width="1" stroke-linejoin="round"/></svg>';
   var r=els[a].tube.getBoundingClientRect(), ar=document.getElementById('app').getBoundingClientRect();
-  hintEl.style.left=(r.left-ar.left+r.width*0.5)+'px';
-  hintEl.style.top=(r.top-ar.top+r.height*0.5)+'px';
+  hintEl.style.left=(r.left-ar.left+r.width*.5-20)+'px';
+  hintEl.style.top=(r.top-ar.top-30)+'px';
   document.getElementById('app').appendChild(hintEl);
 }
 function hideHint(){ if(hintEl&&hintEl.parentNode) hintEl.parentNode.removeChild(hintEl); hintEl=null; }
@@ -170,7 +204,7 @@ function init(){
   if(_inited) return; _inited=true;
   document.getElementById('installBtn').onclick=openStore;
   document.getElementById('ovBtn').onclick=openStore;
-  if(!LEVEL){ LEVEL={cap:4,colors:['#ff5d5d','#5db0ff','#ffd14d','#5de8a0'],tubes:[[0,1,0,1],[1,0,1,0],[2,3,2,3],[3,2,3,2],[],[]]}; }
+  if(!LEVEL){ LEVEL={cap:4,colors:['#ff5d5d','#5db0ff','#ffd14d','#5de8a0','#c08bff'],tubes:[[0,0,0,0],[1,1,1,1],[2,2,2,2],[3,3,3,3],[4,4,4,4],[],[]]}; }
   CAP=LEVEL.cap; COLORS=LEVEL.colors; tubes=LEVEL.tubes.map(function(t){return t.slice();});
   buildTubes();
   setTimeout(showHint,800);

@@ -232,7 +232,8 @@ with col2:
     is_arrow_category = '箭头' in game_category or 'Arrow' in game_category
     is_jigsol_category = '拼图纸牌' in game_category or 'JigSolitaire' in game_category
     is_match3_category = ('三消' in game_category or 'Match' in game_category) and not is_mahjong_category
-    no_api_needed = is_coloring_category or is_match3_category or is_mahjong_category or is_finddiff_category or is_arrow_category or is_jigsol_category
+    is_water_category = '水排序' in game_category or 'Water' in game_category
+    no_api_needed = is_coloring_category or is_match3_category or is_mahjong_category or is_finddiff_category or is_arrow_category or is_jigsol_category or is_water_category
     generate_btn = st.button(
         "🚀 生成试玩广告",
         type="primary",
@@ -282,6 +283,7 @@ with col2:
         use_finddiff_template = is_finddiff
         use_arrow_template = is_arrow
         use_jigsol_template = is_jigsol
+        use_water_sort_template = is_water
 
         if use_match3_template:
             from core.template_generator import generate_match3_shelf, generate_match3_moving, generate_match3_drag
@@ -612,6 +614,31 @@ with col2:
                         html=html_code,
                         store_url=store_url,
                         assets=assets,
+                        output_dir=output_dir,
+                    )
+                    status.update(label="✅ 生成完成！", state="complete")
+                except Exception as e:
+                    status.update(label="❌ 生成失败", state="error")
+                    st.error(f"错误: {str(e)}")
+                    results = None
+        elif use_water_sort_template:
+            from core.template_generator import generate_water_sort
+
+            with st.status("正在生成水排序试玩广告...", expanded=True) as status:
+                st.write("🧪 生成水排序模板...")
+                try:
+                    html_code = generate_water_sort(
+                        store_url=store_url,
+                        colors=5,
+                        empty=2,
+                        cap=4,
+                    )
+                    st.write(f"✅ 模板生成完成（{len(html_code)} 字符，7瓶/5色/2空瓶）")
+                    st.write("📦 正在进行三渠道适配...")
+
+                    results = process_all_channels(
+                        html=html_code,
+                        store_url=store_url,
                         output_dir=output_dir,
                     )
                     status.update(label="✅ 生成完成！", state="complete")
