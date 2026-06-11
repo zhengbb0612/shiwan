@@ -115,6 +115,7 @@ with col1:
     is_puzzle_hint = (not is_jigsol_hint) and ('拼图' in game_category or 'Jigsaw' in game_category
                       or ('Puzzle' in game_category and not is_arrow_hint))
     is_match3_hint = ('三消' in game_category or 'Match' in game_category) and not is_mahjong_hint
+    is_water_hint = '水排序' in game_category or 'Water' in game_category
     is_hidden_hint = '找物' in game_category or 'Hidden' in game_category
     JIGSOL_TEMPLATES = {
         "核心玩法（复古）": "core",
