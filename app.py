@@ -313,7 +313,7 @@ with col2:
         is_finddiff = '找不同' in game_category or 'Difference' in game_category
         is_hidden = '找物' in game_category or 'Hidden' in game_category
         is_water = '水排序' in game_category or 'Water' in game_category
-        is_blind = '暗水排序' in game_category or 'Blind' in game_category
+        is_blind = is_water and '暗水' in water_mode
         use_match3_template = is_match3
         use_mahjong_template = is_mahjong
         use_coloring_template = is_coloring and svg_region_content is not None
