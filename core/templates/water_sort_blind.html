@@ -314,8 +314,10 @@ function onTube(i){
       // 揭晓倒出后露出的下一层颜色
       revealTopColor(from);
       // 倒入的颜色如果已在目标瓶揭晓过，保持揭晓状态
-      if(revealedColors[to] && revealedColors[to][c]){
-        // 已经揭晓过这个颜色，不用再处理
+      // 同时，如果倒入的颜色在源瓶已揭晓，目标瓶也应揭晓
+      if(revealedColors[from] && revealedColors[from][c]){
+        if(!revealedColors[to]) revealedColors[to]={};
+        revealedColors[to][c]=true;
       }
       renderTube(from);renderTube(to);
       busy=false;
