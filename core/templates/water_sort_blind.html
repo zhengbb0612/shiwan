@@ -63,13 +63,20 @@ function beep(f,d) { var c=actx(); if(!c) return; var o=c.createOscillator(),g=c
 function sfxPour() { beep(440,0.15); setTimeout(function(){beep(520,0.1);},80); }
 function sfxWin() { [523,659,784,1047].forEach(function(f,i){ setTimeout(function(){beep(f,0.2);},i*150); }); }
 
-var tubes, cap, colors, selected = -1, moves = 0, solved = 0;
+var tubes, cap, colors, selected = -1, moves = 0, solved = 0, revealed = {};
 
 function init() {
   if (!LEVEL) return;
   tubes = LEVEL.tubes.map(function(t) { return t.slice(); });
   cap = LEVEL.cap;
   colors = LEVEL.colors;
+  revealed = {};
+  // 初始化：每瓶最上层已揭晓
+  for (var i = 0; i < tubes.length; i++) {
+    if (tubes[i].length > 0) {
+      revealed[i + '_' + (tubes[i].length - 1)] = true;
+    }
+  }
   render();
   updateHUD();
 }
@@ -84,8 +91,9 @@ function render() {
       var seg = document.createElement('div');
       seg.className = 'seg';
       if (j < tube.length) {
-        // Only show top layer color, hide others
-        if (j === tube.length - 1) {
+        var key = i + '_' + j;
+        // 最上层或已揭晓的层显示颜色
+        if (j === tube.length - 1 || revealed[key]) {
           seg.style.background = colors[tube[j]];
           seg.style.bottom = (2 + j * 24) + '%';
         } else {
@@ -155,6 +163,10 @@ function pour(a, b) {
   for (var j = 0; j < pourCount; j++) {
     tubes[a].pop();
     tubes[b].push(color);
+  }
+  // 揭晓倒出后露出的下一层
+  if (tubes[a].length > 0) {
+    revealed[a + '_' + (tubes[a].length - 1)] = true;
   }
 }
 
