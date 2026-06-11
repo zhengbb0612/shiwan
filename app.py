@@ -66,12 +66,8 @@ GAME_CATEGORIES = {
     "💎 三消 (Match-3)": "三消/货架消除游戏。滑动或点击匹配3个以上相同物品进行消除，上方物品下落补位。",
     "🀄 麻将 (Mahjong Match)": "麻将配对消除。在牌面中找到相同的两张牌点击消除，逐步清空牌面。",
     "🔍 找不同 (Spot Difference)": "找不同游戏。两张几乎相同的图片并排，找出其中的差异处并点击标记。",
-    "🔎 找物 (Hidden Object)": "隐藏物品游戏。在复杂场景中找到指定的隐藏物品并点击。",
     "➡️ 箭头 (Arrow Puzzle)": "箭头解谜游戏。网格中有多个指向不同方向的箭头，点击旋转箭头方向，使所有箭头形成通往出口的连通路径。",
     "🧪 水排序 (Water Sort)": "水排序游戏。多个瓶子中装有混合颜色的液体层，点击瓶子将顶层液体倒入另一个瓶子，最终让每个瓶子只有单一颜色。",
-    "🔄 合成 (Merge)": "合成游戏。拖拽相同物品合并升级为更高级物品。",
-    "🃏 卡牌 (Card Game)": "卡牌游戏。抽卡、出牌、对战等简化卡牌玩法。",
-    "🏃 跑酷 (Runner)": "跑酷游戏。角色自动前进，滑动躲避障碍收集金币。",
     "✏️ 自定义": "",
 }
 
@@ -119,6 +115,7 @@ with col1:
     is_puzzle_hint = (not is_jigsol_hint) and ('拼图' in game_category or 'Jigsaw' in game_category
                       or ('Puzzle' in game_category and not is_arrow_hint))
     is_match3_hint = ('三消' in game_category or 'Match' in game_category) and not is_mahjong_hint
+    is_hidden_hint = '找物' in game_category or 'Hidden' in game_category
     JIGSOL_TEMPLATES = {
         "核心玩法（复古）": "core",
         "动图前贴 + 核心玩法": "video_core",
@@ -202,9 +199,44 @@ with col1:
             "- 不上传则随机生成一个可解关卡\n"
             "- 无需 API Key，本地秒级生成。"
         )
+    elif is_hidden_hint:
+        st.info(
+            "**找物品类（Hidden Object）：**\n"
+            "- 玩法：在复杂场景中找到指定的隐藏物品并点击，找全所有物品即胜利\n"
+            "- **上传一张场景图片**（PNG/JPG/WebP）作为背景\n"
+            "- **上传一个物品坐标 `.json`**，格式如：\n"
+            "  `[{\"x\":0.3,\"y\":0.5,\"r\":0.08,\"name\":\"Item1\",\"thumb\":\"...\"}]`\n"
+            "  x/y 为相对图宽高的 0~1 比例，r 为命中半径，name 为物品名称，thumb 为物品缩略图（可选）\n"
+            "- 可选：上传物品缩略图图片（系统自动分配给物品）\n"
+            "- 无需 API Key，本地秒级生成。"
+        )
+    water_mode = "明水排序"
+    water_difficulty = "中等（9瓶）"
+    if is_water_hint:
+        water_mode = st.radio(
+            "🧪 水排序模式",
+            options=["明水排序", "暗水排序"],
+            index=0,
+            help="明水排序：所有颜色可见。暗水排序：只能看到最上层颜色，倒掉后才能看到下一层。",
+        )
+        water_difficulty = st.radio(
+            "📊 水排序难度",
+            options=["简单（5瓶）", "中等（9瓶）", "困难（15瓶）"],
+            index=1,
+            help="简单：5瓶3色。中等：9瓶5色。困难：15瓶7色。",
+        )
+        st.info(
+            "**水排序品类：**\n"
+            "- 玩法：点击瓶子将顶层液体倒入另一个瓶子，最终让每个瓶子只有单一颜色\n"
+            "- 无需上传素材，无需 API Key，本地秒级生成\n"
+            "- 每次生成随机布局，保证可解"
+        )
     if is_arrow_hint:
         _uploader_label = "上传关卡 level.json（Unity 导出，可不传则随机生成）"
         _uploader_types = ["png", "jpg", "jpeg", "webp", "svg", "pdf", "json"]
+    elif is_hidden_hint:
+        _uploader_label = "上传场景图片 + 物品坐标JSON（可选物品缩略图）"
+        _uploader_types = ["png", "jpg", "jpeg", "webp", "json"]
     elif is_jigsol_hint and jigsol_mode in ("video_core", "video_only"):
         _uploader_label = "上传 1 段视频（MP4）"
         _uploader_types = ["mp4", "webm", "mov"]
@@ -233,7 +265,9 @@ with col2:
     is_jigsol_category = '拼图纸牌' in game_category or 'JigSolitaire' in game_category
     is_match3_category = ('三消' in game_category or 'Match' in game_category) and not is_mahjong_category
     is_water_category = '水排序' in game_category or 'Water' in game_category
-    no_api_needed = is_coloring_category or is_match3_category or is_mahjong_category or is_finddiff_category or is_arrow_category or is_jigsol_category or is_water_category
+    is_blind_category = '暗水排序' in game_category or 'Blind' in game_category
+    is_hidden_category = '找物' in game_category or 'Hidden' in game_category
+    no_api_needed = is_coloring_category or is_match3_category or is_mahjong_category or is_finddiff_category or is_arrow_category or is_jigsol_category or is_water_category or is_blind_category or is_hidden_category
     generate_btn = st.button(
         "🚀 生成试玩广告",
         type="primary",
@@ -276,6 +310,9 @@ with col2:
         is_puzzle = (not is_jigsol) and ('拼图' in game_category or 'Jigsaw' in game_category
                      or ('Puzzle' in game_category and not is_arrow))
         is_finddiff = '找不同' in game_category or 'Difference' in game_category
+        is_hidden = '找物' in game_category or 'Hidden' in game_category
+        is_water = '水排序' in game_category or 'Water' in game_category
+        is_blind = '暗水排序' in game_category or 'Blind' in game_category
         use_match3_template = is_match3
         use_mahjong_template = is_mahjong
         use_coloring_template = is_coloring and svg_region_content is not None
@@ -283,7 +320,9 @@ with col2:
         use_finddiff_template = is_finddiff
         use_arrow_template = is_arrow
         use_jigsol_template = is_jigsol
-        use_water_sort_template = is_water
+        use_water_sort_template = is_water and not is_blind
+        use_blind_sort_template = is_blind
+        use_hidden_template = is_hidden
 
         if use_match3_template:
             from core.template_generator import generate_match3_shelf, generate_match3_moving, generate_match3_drag
@@ -625,15 +664,127 @@ with col2:
             from core.template_generator import generate_water_sort
 
             with st.status("正在生成水排序试玩广告...", expanded=True) as status:
-                st.write("🧪 生成水排序模板...")
+                # 根据难度设置参数
+                if '简单' in water_difficulty:
+                    colors, empty, cap = 3, 2, 3
+                    total = 5
+                elif '困难' in water_difficulty:
+                    colors, empty, cap = 7, 2, 4
+                    total = 15
+                else:  # 中等
+                    colors, empty, cap = 5, 2, 4
+                    total = 9
+
+                st.write(f"🧪 生成水排序模板（{total}瓶/{colors}色/{empty}空瓶）...")
                 try:
                     html_code = generate_water_sort(
                         store_url=store_url,
-                        colors=5,
-                        empty=2,
-                        cap=4,
+                        colors=colors,
+                        empty=empty,
+                        cap=cap,
                     )
-                    st.write(f"✅ 模板生成完成（{len(html_code)} 字符，7瓶/5色/2空瓶）")
+                    st.write(f"✅ 模板生成完成（{len(html_code)} 字符）")
+                    st.write("📦 正在进行三渠道适配...")
+
+                    results = process_all_channels(
+                        html=html_code,
+                        store_url=store_url,
+                        output_dir=output_dir,
+                        product_name=f'watersort-{water_difficulty[:2]}',
+                    )
+                    status.update(label="✅ 生成完成！", state="complete")
+                except Exception as e:
+                    status.update(label="❌ 生成失败", state="error")
+                    st.error(f"错误: {str(e)}")
+                    results = None
+        elif use_blind_sort_template:
+            from core.template_generator import generate_water_sort_blind
+
+            with st.status("正在生成暗水排序试玩广告...", expanded=True) as status:
+                # 根据难度设置参数
+                if '简单' in water_difficulty:
+                    colors, empty, cap = 3, 2, 3
+                    total = 5
+                elif '困难' in water_difficulty:
+                    colors, empty, cap = 7, 2, 4
+                    total = 15
+                else:  # 中等
+                    colors, empty, cap = 5, 2, 4
+                    total = 9
+
+                st.write(f"🔮 生成暗水排序模板（{total}瓶/{colors}色）...")
+                try:
+                    html_code = generate_water_sort_blind(
+                        store_url=store_url,
+                        colors=colors,
+                        empty=empty,
+                        cap=cap,
+                    )
+                    st.write(f"✅ 模板生成完成（{len(html_code)} 字符）")
+                    st.write("📦 正在进行三渠道适配...")
+
+                    results = process_all_channels(
+                        html=html_code,
+                        store_url=store_url,
+                        output_dir=output_dir,
+                        product_name=f'blindsort-{water_difficulty[:2]}',
+                    )
+                    status.update(label="✅ 生成完成！", state="complete")
+                except Exception as e:
+                    status.update(label="❌ 生成失败", state="error")
+                    st.error(f"错误: {str(e)}")
+                    results = None
+        elif use_hidden_template:
+            from core.template_generator import generate_hidden_object
+            from core.media import make_data_uri_from_bytes
+
+            with st.status("正在生成找物试玩广告...", expanded=True) as status:
+                st.write("🔍 生成找物模板...")
+                try:
+                    scene_uri = None
+                    items = []
+                    if asset_files:
+                        for af in asset_files:
+                            af.seek(0)
+                            file_data = af.read()
+                            name = af.name.lower()
+                            if name.endswith('.json'):
+                                import json as _json
+                                try:
+                                    item_data = _json.loads(file_data.decode('utf-8', errors='ignore'))
+                                    if isinstance(item_data, list):
+                                        items = item_data
+                                except Exception as je:
+                                    st.warning(f"JSON 解析失败：{je}")
+                            elif name.endswith(('.png', '.jpg', '.jpeg', '.webp')):
+                                mime = 'image/png'
+                                if name.endswith('.webp'):
+                                    mime = 'image/webp'
+                                elif name.endswith(('.jpg', '.jpeg')):
+                                    mime = 'image/jpeg'
+                                if not scene_uri:
+                                    scene_uri = make_data_uri_from_bytes(file_data, mime)
+                                else:
+                                    thumb_uri = make_data_uri_from_bytes(file_data, mime)
+                                    for item in items:
+                                        if not item.get('thumb'):
+                                            item['thumb'] = thumb_uri
+                                            break
+
+                    if not scene_uri:
+                        raise ValueError("请上传一张场景图片作为背景。")
+
+                    if not items:
+                        raise ValueError("请上传一个物品坐标 JSON 文件，格式如：[{\"x\":0.3,\"y\":0.5,\"r\":0.08,\"name\":\"Item1\"}]")
+
+                    st.write(f"📎 已加载场景图 + {len(items)} 个物品")
+
+                    html_code = generate_hidden_object(
+                        store_url=store_url,
+                        scene_data_uri=scene_uri,
+                        items=items,
+                    )
+                    st.write(f"✅ 模板生成完成（{len(html_code)} 字符）")
                     st.write("📦 正在进行三渠道适配...")
 
                     results = process_all_channels(

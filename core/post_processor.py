@@ -67,7 +67,7 @@ def check_file_size(html: str, max_mb: float) -> tuple[bool, float]:
     return size_mb <= max_mb, size_mb
 
 
-def process_all_channels(html: str, store_url: str, assets: dict = None, output_dir: str = None) -> dict:
+def process_all_channels(html: str, store_url: str, assets: dict = None, output_dir: str = None, product_name: str = '') -> dict:
     results = {}
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
@@ -94,7 +94,10 @@ def process_all_channels(html: str, store_url: str, assets: dict = None, output_
         channel_dir = output_dir / config['name']
         channel_dir.mkdir(parents=True, exist_ok=True)
 
-        filename = f"playable_{channel_key}_{timestamp}.html"
+        if product_name:
+            filename = f"{channel_key}-{product_name}-{timestamp}.html"
+        else:
+            filename = f"playable_{channel_key}_{timestamp}.html"
         filepath = channel_dir / filename
 
         filepath.write_text(channel_html, encoding='utf-8')

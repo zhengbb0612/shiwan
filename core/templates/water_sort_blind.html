@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+<!-- UAC_META_PLACEHOLDER -->
+<title>Blind Water Sort</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#1a1a2e;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+#app{position:relative;width:min(100vw,calc(100vh * 9 / 16));height:min(100vh,calc(100vw * 16 / 9));aspect-ratio:9/16;margin:0 auto;overflow:hidden;background:linear-gradient(180deg,#16213e 0%,#0f3460 100%)}
+#hud{position:absolute;left:0;right:0;top:0;padding:max(env(safe-area-inset-top),10px) 14px 6px;display:flex;justify-content:space-between;align-items:center;z-index:20}
+.pill{height:40px;border-radius:20px;padding:0 16px;display:flex;align-items:center;justify-content:center;gap:7px;background:linear-gradient(180deg,rgba(52,152,219,.95),rgba(41,128,185,.96));box-shadow:0 6px 16px rgba(0,0,0,.32),inset 0 1px 0 rgba(174,214,241,.3);border:1px solid rgba(133,193,233,.2);color:#eaf2ff;font-weight:800;font-size:15px}
+.pill b{font-size:18px}
+.toptip{position:absolute;left:50%;top:8%;transform:translateX(-50%);width:90%;text-align:center;color:#dce8ff;font-weight:900;font-size:min(4.2vw,20px);z-index:18;text-shadow:0 2px 6px rgba(0,0,0,.55)}
+#board{position:absolute;left:5%;right:5%;top:14%;bottom:14%;display:flex;flex-wrap:wrap;justify-content:center;align-content:center;gap:8px;z-index:10}
+.tube{width:12vw;height:40vw;max-width:60px;max-height:200px;border-radius:0 0 12px 12px;background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.2);position:relative;cursor:pointer;transition:transform .2s;overflow:hidden}
+.tube.selected{transform:translateY(-10px);border-color:#3498db;box-shadow:0 0 20px rgba(52,152,219,.5)}
+.tube .seg{position:absolute;left:2px;right:2px;height:23%;border-radius:2px;transition:bottom .3s}
+.tube .seg.hidden{background:#555 !important;opacity:.6}
+.tube .seg.hidden::after{content:'?';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.4);font-size:16px;font-weight:bold}
+#moves{position:absolute;left:50%;bottom:8%;transform:translateX(-50%);z-index:18}
+#moves .pill{background:linear-gradient(180deg,rgba(46,204,113,.95),rgba(39,174,96,.96))}
+.install{position:absolute;right:4%;bottom:3%;background:linear-gradient(180deg,#e74c3c,#c0392b);color:#fff;border:none;border-radius:999px;padding:10px 20px;font-weight:900;font-size:min(4vw,16px);z-index:32;box-shadow:0 6px 14px rgba(192,57,43,.5);cursor:pointer;animation:ctaPulse 1.3s infinite}
+@keyframes ctaPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+#overlay{position:absolute;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:50}
+#overlay.show{display:flex}
+.card{width:80%;background:linear-gradient(180deg,#ecf0f1,#bdc3c7);border-radius:28px;padding:30px 26px;text-align:center;box-shadow:0 20px 44px rgba(0,0,0,.5)}
+.card h1{margin:0 0 8px;color:#2c3e50;font-size:min(12vw,46px)}
+.card p{margin:0 0 20px;color:#34495e;font-size:min(5vw,22px);font-weight:700;line-height:1.4}
+.bigbtn{border:none;border-radius:999px;background:linear-gradient(180deg,#e74c3c,#c0392b);color:#fff;padding:16px 40px;font-size:min(6vw,26px);font-weight:900;cursor:pointer;box-shadow:0 6px 16px rgba(192,57,43,.5);animation:ctaPulse 1.4s infinite}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="hud">
+    <div class="pill"><span>🧪</span><span>Blind Sort</span></div>
+    <div class="pill"><b id="foundValue">0</b><span>/</span><b id="totalValue">0</b></div>
+  </div>
+  <div class="toptip" id="toptip">Only top layer is visible!</div>
+  <div id="board"></div>
+  <div id="moves"><div class="pill"><span>Moves: </span><b id="moveCount">0</b></div></div>
+  <button class="install" id="installBtn">Install</button>
+  <div id="overlay">
+    <div class="card">
+      <h1 id="ovTitle">You Win!</h1>
+      <p id="ovText">Perfect sorting!</p>
+      <button class="bigbtn" id="ovBtn">Install</button>
+    </div>
+  </div>
+</div>
+<script>
+var CLICK_URL = "STORE_URL_PLACEHOLDER";
+var LEVEL = /*{{LEVEL_DATA}}*/null;
+
+function openStore() {
+  try { if (window.mraid && mraid.open) { mraid.open(CLICK_URL); return; } } catch(e) {}
+  try { window.open(CLICK_URL, '_blank', 'noopener'); } catch(e) { window.location.href = CLICK_URL; }
+}
+
+var AC = null;
+function actx() { try { if (!AC) AC = new (window.AudioContext||window.webkitAudioContext)(); if (AC.state==='suspended') AC.resume(); } catch(e) {} return AC; }
+function beep(f,d) { var c=actx(); if(!c) return; var o=c.createOscillator(),g=c.createGain(); o.frequency.value=f; g.gain.value=0.1; o.connect(g); g.connect(c.destination); o.start(); g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+d); o.stop(c.currentTime+d); }
+function sfxPour() { beep(440,0.15); setTimeout(function(){beep(520,0.1);},80); }
+function sfxWin() { [523,659,784,1047].forEach(function(f,i){ setTimeout(function(){beep(f,0.2);},i*150); }); }
+
+var tubes, cap, colors, selected = -1, moves = 0, solved = 0;
+
+function init() {
+  if (!LEVEL) return;
+  tubes = LEVEL.tubes.map(function(t) { return t.slice(); });
+  cap = LEVEL.cap;
+  colors = LEVEL.colors;
+  render();
+  updateHUD();
+}
+
+function render() {
+  var board = document.getElementById('board');
+  board.innerHTML = '';
+  tubes.forEach(function(tube, i) {
+    var div = document.createElement('div');
+    div.className = 'tube' + (i === selected ? ' selected' : '');
+    for (var j = 0; j < cap; j++) {
+      var seg = document.createElement('div');
+      seg.className = 'seg';
+      if (j < tube.length) {
+        // Only show top layer color, hide others
+        if (j === tube.length - 1) {
+          seg.style.background = colors[tube[j]];
+          seg.style.bottom = (2 + j * 24) + '%';
+        } else {
+          seg.className = 'seg hidden';
+          seg.style.background = '#555';
+          seg.style.bottom = (2 + j * 24) + '%';
+        }
+      } else {
+        seg.style.background = 'transparent';
+        seg.style.bottom = (2 + j * 24) + '%';
+      }
+      div.appendChild(seg);
+    }
+    div.addEventListener('click', function() { onTap(i); });
+    board.appendChild(div);
+  });
+}
+
+function onTap(i) {
+  if (selected < 0) {
+    if (tubes[i].length > 0) {
+      selected = i;
+      sfxPour();
+      render();
+    }
+  } else {
+    if (i === selected) {
+      selected = -1;
+      render();
+      return;
+    }
+    if (canPour(selected, i)) {
+      pour(selected, i);
+      moves++;
+      selected = -1;
+      render();
+      updateHUD();
+      if (checkWin()) {
+        setTimeout(function() {
+          document.getElementById('overlay').classList.add('show');
+          sfxWin();
+        }, 400);
+      }
+    } else {
+      selected = -1;
+      render();
+    }
+  }
+}
+
+function canPour(a, b) {
+  if (tubes[a].length === 0) return false;
+  if (tubes[b].length >= cap) return false;
+  if (tubes[b].length === 0) return true;
+  return tubes[a][tubes[a].length-1] === tubes[b][tubes[b].length-1];
+}
+
+function pour(a, b) {
+  var color = tubes[a][tubes[a].length-1];
+  var count = 0;
+  for (var i = tubes[a].length-1; i >= 0; i--) {
+    if (tubes[a][i] === color) count++;
+    else break;
+  }
+  var space = cap - tubes[b].length;
+  var pourCount = Math.min(count, space);
+  for (var j = 0; j < pourCount; j++) {
+    tubes[a].pop();
+    tubes[b].push(color);
+  }
+}
+
+function checkWin() {
+  solved = 0;
+  for (var i = 0; i < tubes.length; i++) {
+    if (tubes[i].length === 0) continue;
+    if (tubes[i].length === cap && tubes[i].every(function(c) { return c === tubes[i][0]; })) {
+      solved++;
+    }
+  }
+  return solved >= colors;
+}
+
+function updateHUD() {
+  document.getElementById('moveCount').textContent = moves;
+  document.getElementById('foundValue').textContent = solved;
+  document.getElementById('totalValue').textContent = colors;
+}
+
+document.getElementById('installBtn').addEventListener('click', openStore);
+document.getElementById('ovBtn').addEventListener('click', openStore);
+document.getElementById('overlay').addEventListener('click', function(e) { if (e.target === this) openStore(); });
+
+init();
+</script>
+</body>
+</html>
