@@ -127,8 +127,25 @@ function sfxComplete(){ beep(720,0.08,'sine',0.08); }
 function sfxWin(){ [523,659,784,1047].forEach(function(f,i){ setTimeout(function(){beep(f,0.18,'triangle',0.1);},i*90); }); }
 
 var LEVEL = /*{{LEVEL_DATA}}*/null;
-var CAP, COLORS, tubes=[], els=[], sel=-1, moves=0, solved=false, busy=false, revealed={};
+var CAP, COLORS, tubes=[], els=[], sel=-1, moves=0, solved=false, busy=false, revealedColors={};
 var pourSvg;
+
+// 记录已揭晓的颜色（按瓶子索引）
+function revealTopColor(tubeIdx){
+  if(tubes[tubeIdx].length>0){
+    var colorIdx=tubes[tubeIdx][tubes[tubeIdx].length-1];
+    if(!revealedColors[tubeIdx]) revealedColors[tubeIdx]={};
+    revealedColors[tubeIdx][colorIdx]=true;
+  }
+}
+
+// 检查某层是否已揭晓
+function isRevealed(tubeIdx, layerIdx){
+  if(layerIdx===tubes[tubeIdx].length-1) return true; // 最上层总是可见
+  if(!revealedColors[tubeIdx]) return false;
+  var colorIdx=tubes[tubeIdx][layerIdx];
+  return revealedColors[tubeIdx][colorIdx]===true;
+}
 
 function pourStream(fromIdx, toIdx, color, count, fromOrig, toOrig, onDone){
   var app = document.getElementById('app');
@@ -156,9 +173,8 @@ function pourStream(fromIdx, toIdx, color, count, fromOrig, toOrig, onDone){
     for(var k=0;k<ds.length;k++){
       var seg=document.createElement('div');seg.className='seg';
       if(k===ds.length-1)seg.classList.add('seg-top');
-      // 暗水排序逻辑：只有已揭晓的层显示颜色
-      var key=idx+'_'+k;
-      if(k===ds.length-1 || revealed[key]){
+      // 暗水排序逻辑：已揭晓的颜色显示
+      if(isRevealed(idx,k)){
         seg.style.background=COLORS[ds[k]];
       }else{
         seg.classList.add('hidden-seg');
@@ -223,11 +239,10 @@ function buildTubes(){
     t.addEventListener('pointerdown',function(e){e.preventDefault();});
     wrap.appendChild(t);els.push({tube:t,glass:body});
   }
-  // 初始化揭晓状态
+  // 初始化：每瓶最上层颜色已揭晓
+  revealedColors={};
   for(var i=0;i<tubes.length;i++){
-    if(tubes[i].length>0){
-      revealed[i+'_'+(tubes[i].length-1)]=true;
-    }
+    revealTopColor(i);
   }
   renderAll();
 }
@@ -238,9 +253,8 @@ function renderTube(i){
   for(var k=0;k<stack.length;k++){
     var seg=document.createElement('div');seg.className='seg';
     if(k===stack.length-1)seg.classList.add('seg-top');
-    // 暗水排序逻辑：只有最上层或已揭晓的层显示颜色
-    var key=i+'_'+k;
-    if(k===stack.length-1 || revealed[key]){
+    // 暗水排序逻辑：最上层或已揭晓的颜色显示
+    if(isRevealed(i,k)){
       seg.style.background=COLORS[stack[k]];
     }else{
       seg.classList.add('hidden-seg');
@@ -297,9 +311,11 @@ function onTube(i){
     pourStream(from,to,color,n,fromOrig,toOrig,function(){
       els[from].tube.style.transform='';
       tubes[from]=fromAfter.slice();tubes[to]=toAfter.slice();
-      // 揭晓倒出后露出的下一层
-      if(tubes[from].length>0){
-        revealed[from+'_'+(tubes[from].length-1)]=true;
+      // 揭晓倒出后露出的下一层颜色
+      revealTopColor(from);
+      // 倒入的颜色如果已在目标瓶揭晓过，保持揭晓状态
+      if(revealedColors[to] && revealedColors[to][c]){
+        // 已经揭晓过这个颜色，不用再处理
       }
       renderTube(from);renderTube(to);
       busy=false;
