@@ -264,11 +264,12 @@ with col2:
     is_finddiff_category = '找不同' in game_category or 'Difference' in game_category
     is_arrow_category = '箭头' in game_category or 'Arrow' in game_category
     is_jigsol_category = '拼图纸牌' in game_category or 'JigSolitaire' in game_category
+    is_puzzle_category = ('拼图' in game_category or 'Jigsaw' in game_category or 'Puzzle' in game_category) and not is_jigsol_category and not is_arrow_category
     is_match3_category = ('三消' in game_category or 'Match' in game_category) and not is_mahjong_category
     is_water_category = '水排序' in game_category or 'Water' in game_category
     is_blind_category = '暗水排序' in game_category or 'Blind' in game_category
     is_hidden_category = '找物' in game_category or 'Hidden' in game_category
-    no_api_needed = is_coloring_category or is_match3_category or is_mahjong_category or is_finddiff_category or is_arrow_category or is_jigsol_category or is_water_category or is_blind_category or is_hidden_category
+    no_api_needed = is_coloring_category or is_match3_category or is_mahjong_category or is_finddiff_category or is_arrow_category or is_jigsol_category or is_puzzle_category or is_water_category or is_blind_category or is_hidden_category
     generate_btn = st.button(
         "🚀 生成试玩广告",
         type="primary",
