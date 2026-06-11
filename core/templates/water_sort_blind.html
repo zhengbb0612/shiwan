@@ -173,8 +173,9 @@ function pourStream(fromIdx, toIdx, color, count, fromOrig, toOrig, onDone){
     for(var k=0;k<ds.length;k++){
       var seg=document.createElement('div');seg.className='seg';
       if(k===ds.length-1)seg.classList.add('seg-top');
-      // 暗水排序逻辑：已揭晓的颜色显示
-      if(isRevealed(idx,k)){
+      // 暗水排序逻辑：已揭晓的颜色显示，正在倒入的水也显示
+      var isPouringLiquid = (idx===toIdx && k>=toOrig.length);
+      if(isRevealed(idx,k) || isPouringLiquid){
         seg.style.background=COLORS[ds[k]];
       }else{
         seg.classList.add('hidden-seg');
