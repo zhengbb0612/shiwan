@@ -58,7 +58,9 @@ def compress_image(image_data: bytes, max_kb: int = 2800, max_width: int = 900, 
         return image_data, 'image/jpeg'
 
     img = Image.open(io.BytesIO(image_data))
-    if img.mode == 'RGBA':
+    if img.mode in ('RGBA', 'LA', 'PA'):
+        img = img.convert('RGB')
+    elif img.mode != 'RGB':
         img = img.convert('RGB')
 
     w, h = img.size
