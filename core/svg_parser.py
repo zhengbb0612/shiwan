@@ -100,7 +100,7 @@ def assign_spatial_blocks(paths_with_info: list, num_blocks: int = 12) -> list:
 
 
 def parse_svg(svg_content: str, num_blocks: int = 12) -> dict:
-    """Parse SVG region file, keep all colors, and divide into spatial blocks.
+    """Parse SVG region file and divide paths into spatial blocks.
 
     Returns:
         {

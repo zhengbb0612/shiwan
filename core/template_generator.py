@@ -247,18 +247,26 @@ def generate_color_by_number(svg_content: str, store_url: str, num_blocks: int =
         )
     svg_paths_str = "\n".join(svg_paths_html)
 
-    palette_html_parts = []
-    unique_colors = []
-    seen_hex = set()
-    for p in data['palette']:
-        if p['hex'] not in seen_hex:
-            unique_colors.append(p['hex'])
-            seen_hex.add(p['hex'])
+    # 为每个block分配一个显示颜色（使用该block中出现次数最多的颜色）
+    block_colors = []
+    for block in data['blocks']:
+        if block:
+            # 统计该block中每种颜色的出现次数
+            color_count = {}
+            for pi in block:
+                ci = data['paths'][pi]['colorIdx']
+                color_count[ci] = color_count.get(ci, 0) + 1
+            # 选择出现次数最多的颜色
+            max_color_idx = max(color_count, key=color_count.get)
+            block_colors.append(data['palette'][max_color_idx]['hex'])
+        else:
+            block_colors.append('#ccc')
 
     game_data = {
-        'palette': [p['hex'] for p in data['palette']],
+        'palette': block_colors,
         'blocks': data['blocks'],
         'pathColors': [p['colorIdx'] for p in data['paths']],
+        'originalColors': [data['palette'][p['colorIdx']]['hex'] for p in data['paths']],
     }
 
     template = template.replace('{{VIEWBOX}}', data['viewBox'])
@@ -267,13 +275,8 @@ def generate_color_by_number(svg_content: str, store_url: str, num_blocks: int =
     template = template.replace('{{GAME_DATA_JSON}}', json.dumps(game_data, separators=(',', ':')))
 
     palette_btns = []
-    for i in range(min(len(data['blocks']), num_blocks)):
-        block_paths = data['blocks'][i]
-        if block_paths:
-            color_idx = data['paths'][block_paths[0]]['colorIdx']
-            color = data['palette'][color_idx]['hex']
-        else:
-            color = '#ccc'
+    for i in range(len(data['blocks'])):
+        color = block_colors[i]
         palette_btns.append(
             f'<div class="color-btn" data-block="{i}" style="background:{color}">'
             f'<span class="num">{i+1}</span></div>'
