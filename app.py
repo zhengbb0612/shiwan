@@ -488,9 +488,12 @@ with col2:
                                     img = Image.open(BytesIO(images[0][0]))
                                     W, H = img.size
                                     avg = (W + H) / 2.0
+                                    # 正东南方向偏移（两次调整的总偏移量）
+                                    offset_x = 0.065
+                                    offset_y = 0.065
                                     diffs.append({
-                                        'x': round(cx / W, 4),
-                                        'y': round(cy / H, 4),
+                                        'x': round(cx / W + offset_x, 4),
+                                        'y': round(cy / H + offset_y, 4),
                                         'r': round((dia / 2.0) / avg, 4),
                                     })
                             st.write(f"✅ 已加载图A+图B + {len(diffs)} 个不同点")
