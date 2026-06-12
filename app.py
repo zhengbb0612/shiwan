@@ -468,18 +468,45 @@ with col2:
                                     images.append((data, mime))
 
                     if level is not None:
-                        # production level pack: base + atlas + level.json
-                        if base_bytes is None and images:
-                            base_bytes = images[0][0]
-                        if atlas_bytes is None and len(images) > 1:
-                            atlas_bytes = images[1][0]
-                        if base_bytes is None or atlas_bytes is None:
-                            raise ValueError("关卡包模式需要 base 底图、atlas 图集 和 level.json 三个文件（文件名建议含 base / atlas）。")
-                        st.write("🧩 检测到关卡包格式，正在合成差异图...")
-                        a_bytes, b_bytes, diffs = compose_finddiff_from_levelpack(base_bytes, atlas_bytes, level)
-                        img_a = make_data_uri_from_bytes(a_bytes, 'image/jpeg')
-                        img_b = make_data_uri_from_bytes(b_bytes, 'image/jpeg')
-                        st.write(f"✅ 已合成原图/差异图 + {len(diffs)} 个不同点")
+                        # 如果用户已经提供了图A和图B，直接使用
+                        if len(images) >= 2:
+                            st.write("📷 检测到图A和图B，直接使用...")
+                            img_a = make_data_uri_from_bytes(images[0][0], images[0][1])
+                            img_b = make_data_uri_from_bytes(images[1][0], images[1][1])
+                            # 从level.json提取cirPos作为差异点
+                            W, H = 1, 1  # 归一化坐标，不需要实际尺寸
+                            avg = 1
+                            diffs = []
+                            for item in level.get('items', []):
+                                cir = item.get('cirPos')
+                                if cir:
+                                    cx, cy = cir[0], cir[1]
+                                    dia = item.get('cir_size', 0.1)
+                                    # 归一化坐标需要图片实际尺寸
+                                    from PIL import Image
+                                    from io import BytesIO
+                                    img = Image.open(BytesIO(images[0][0]))
+                                    W, H = img.size
+                                    avg = (W + H) / 2.0
+                                    diffs.append({
+                                        'x': round(cx / W, 4),
+                                        'y': round(cy / H, 4),
+                                        'r': round((dia / 2.0) / avg, 4),
+                                    })
+                            st.write(f"✅ 已加载图A+图B + {len(diffs)} 个不同点")
+                        else:
+                            # production level pack: base + atlas + level.json
+                            if base_bytes is None and images:
+                                base_bytes = images[0][0]
+                            if atlas_bytes is None and len(images) > 1:
+                                atlas_bytes = images[1][0]
+                            if base_bytes is None or atlas_bytes is None:
+                                raise ValueError("关卡包模式需要 base 底图、atlas 图集 和 level.json 三个文件（文件名建议含 base / atlas）。")
+                            st.write("🧩 检测到关卡包格式，正在合成差异图...")
+                            a_bytes, b_bytes, diffs = compose_finddiff_from_levelpack(base_bytes, atlas_bytes, level)
+                            img_a = make_data_uri_from_bytes(a_bytes, 'image/jpeg')
+                            img_b = make_data_uri_from_bytes(b_bytes, 'image/jpeg')
+                            st.write(f"✅ 已合成原图/差异图 + {len(diffs)} 个不同点")
                     else:
                         if len(images) < 2:
                             raise ValueError("找不同需要上传两张图片（原图 A + 差异图 B），或上传一套关卡包（base + atlas + level.json）。")
