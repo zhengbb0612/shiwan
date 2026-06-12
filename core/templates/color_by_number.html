@@ -21,7 +21,7 @@ html,body{width:100%;height:100%;overflow:hidden;position:fixed;touch-action:non
 #svg-area svg{max-width:100%;max-height:100%;object-fit:contain}
 #svg-area svg path{stroke:#666;stroke-width:1;transition:fill 0.3s ease;cursor:pointer}
 #svg-area svg path.filled{stroke:#444;stroke-width:0.5}
-#svg-area svg path.block-highlight{stroke:#FFD700;stroke-width:3;filter:drop-shadow(0 0 4px rgba(255,215,0,0.6))}
+#svg-area svg.path.highlight-ready{fill:#d0d0d0 !important;stroke:#999;stroke-width:1.5;cursor:pointer}
 #palette-area{height:80px;background:#1a1a2e;display:flex;align-items:center;padding:0 8px;overflow-x:auto;overflow-y:hidden;flex-shrink:0;gap:6px;-webkit-overflow-scrolling:touch}
 #palette-area::-webkit-scrollbar{display:none}
 .color-btn{width:44px;height:44px;min-width:44px;border-radius:50%;border:3px solid transparent;cursor:pointer;position:relative;transition:transform 0.2s,border-color 0.2s}
@@ -108,11 +108,11 @@ function openStore() {
 
   let selectedColor = -1;
   let filledBlocks = new Set();
-  let currentBlockIdx = 0;
   let soundEnabled = true;
   let hintTimer = null;
   let gameStarted = false;
   let audioCtx = null;
+  let currentHintStep = 0; // 0: 指向色号1, 1: 指向区域, 2: 指向色号2, ...
 
   function getAudioCtx() {
     if (!audioCtx) {
@@ -195,19 +195,99 @@ function openStore() {
     document.getElementById('progress-fill').style.width = (count / numBlocks * 100) + '%';
   }
 
-  function highlightCurrentBlock() {
-    document.querySelectorAll('#svg-area svg path').forEach(p => p.classList.remove('block-highlight'));
-    if (currentBlockIdx < numBlocks && !filledBlocks.has(currentBlockIdx)) {
-      const blockPaths = blocks[currentBlockIdx];
-      blockPaths.forEach(pi => {
-        const el = document.querySelector(`[data-idx="${pi}"]`);
-        if (el && !el.classList.contains('filled')) {
-          el.classList.add('block-highlight');
-        }
-      });
+  // 高亮当前选中色号对应的待涂色区域（浅灰色）
+  function highlightColorBlocks(colorIdx) {
+    // 清除所有高亮
+    document.querySelectorAll('#svg-area svg path').forEach(p => {
+      p.classList.remove('highlight-ready');
+    });
+    
+    // 高亮该色号的所有未涂色区域
+    for (let i = 0; i < numBlocks; i++) {
+      if (filledBlocks.has(i)) continue;
+      const blockPaths = blocks[i];
+      if (blockPaths.length === 0) continue;
+      const firstPathIdx = blockPaths[0];
+      if (pathColors[firstPathIdx] === colorIdx) {
+        blockPaths.forEach(pi => {
+          const el = document.querySelector(`[data-idx="${pi}"]`);
+          if (el && !el.classList.contains('filled')) {
+            el.classList.add('highlight-ready');
+          }
+        });
+      }
     }
   }
 
+  // 清除高亮
+  function clearHighlight() {
+    document.querySelectorAll('#svg-area svg path').forEach(p => {
+      p.classList.remove('highlight-ready');
+    });
+  }
+
+  // 显示提示手（指向色号按钮）
+  function showHintToPalette(colorIdx) {
+    const hand = document.getElementById('hint-hand');
+    const btn = document.querySelector(`.color-btn[data-block="${colorIdx}"]`);
+    if (btn) {
+      const rect = btn.getBoundingClientRect();
+      hand.style.left = (rect.left + rect.width / 2 - 18) + 'px';
+      hand.style.top = (rect.top - 40) + 'px';
+      hand.classList.add('visible');
+    }
+  }
+
+  // 显示提示手（指向SVG区域）
+  function showHintToArea(colorIdx) {
+    const hand = document.getElementById('hint-hand');
+    // 找到该色号的第一个未涂色区域
+    for (let i = 0; i < numBlocks; i++) {
+      if (filledBlocks.has(i)) continue;
+      const blockPaths = blocks[i];
+      if (blockPaths.length === 0) continue;
+      const firstPathIdx = blockPaths[0];
+      if (pathColors[firstPathIdx] === colorIdx) {
+        const midIdx = blockPaths[Math.floor(blockPaths.length / 2)];
+        const el = document.querySelector(`[data-idx="${midIdx}"]`);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          hand.style.left = (rect.left + rect.width / 2 - 18) + 'px';
+          hand.style.top = (rect.top + rect.height / 2 - 18) + 'px';
+          hand.classList.add('visible');
+        }
+        return;
+      }
+    }
+  }
+
+  function hideHint() {
+    document.getElementById('hint-hand').classList.remove('visible');
+  }
+
+  // 获取下一个需要涂色的色号
+  function getNextColorIdx() {
+    for (let i = 0; i < numBlocks; i++) {
+      if (filledBlocks.has(i)) continue;
+      const blockPaths = blocks[i];
+      if (blockPaths.length === 0) continue;
+      return pathColors[blockPaths[0]];
+    }
+    return -1;
+  }
+
+  // 检查某个色号是否还有未涂色的区域
+  function hasUnfilledBlocks(colorIdx) {
+    for (let i = 0; i < numBlocks; i++) {
+      if (filledBlocks.has(i)) continue;
+      const blockPaths = blocks[i];
+      if (blockPaths.length === 0) continue;
+      if (pathColors[blockPaths[0]] === colorIdx) return true;
+    }
+    return false;
+  }
+
+  // 填充一个色块
   function fillBlock(blockIdx) {
     if (filledBlocks.has(blockIdx)) return;
     filledBlocks.add(blockIdx);
@@ -217,10 +297,9 @@ function openStore() {
       const el = document.querySelector(`[data-idx="${pi}"]`);
       if (el) {
         setTimeout(() => {
-          const colorIdx = pathColors[pi];
-          el.style.fill = palette[colorIdx];
+          el.style.fill = palette[pathColors[pi]];
           el.classList.add('filled');
-          el.classList.remove('block-highlight');
+          el.classList.remove('highlight-ready');
         }, i * 8);
       }
     });
@@ -231,25 +310,32 @@ function openStore() {
     playSuccess();
     updateProgress();
 
-    currentBlockIdx = findNextBlock();
-    setTimeout(() => highlightCurrentBlock(), blockPaths.length * 8 + 100);
+    // 检查该色号是否还有未涂色区域
+    const colorIdx = pathColors[blockPaths[0]];
+    if (!hasUnfilledBlocks(colorIdx)) {
+      // 该色号完成，标记为done
+      const btn = document.querySelector(`.color-btn[data-block="${colorIdx}"]`);
+      if (btn) btn.classList.add('done');
+      selectedColor = -1;
+      clearHighlight();
+      
+      // 继续提示下一个色号
+      const nextColor = getNextColorIdx();
+      if (nextColor >= 0) {
+        setTimeout(() => {
+          showHintToPalette(nextColor);
+        }, 500);
+      }
+    }
 
     if (filledBlocks.size >= numBlocks) {
       setTimeout(showWin, 800);
     }
-
-    resetHintTimer();
-  }
-
-  function findNextBlock() {
-    for (let i = 0; i < numBlocks; i++) {
-      if (!filledBlocks.has(i)) return i;
-    }
-    return numBlocks;
   }
 
   function showWin() {
     playCelebration();
+    hideHint();
     document.getElementById('win-screen').classList.add('show');
     for (let i = 0; i < 30; i++) {
       setTimeout(() => {
@@ -262,31 +348,27 @@ function openStore() {
     }
   }
 
-  function showHint() {
-    const hand = document.getElementById('hint-hand');
-    if (currentBlockIdx >= numBlocks) return;
-    const blockPaths = blocks[currentBlockIdx];
-    if (!blockPaths || blockPaths.length === 0) return;
-    const midIdx = blockPaths[Math.floor(blockPaths.length / 2)];
-    const el = document.querySelector(`[data-idx="${midIdx}"]`);
-    if (el) {
-      const rect = el.getBoundingClientRect();
-      hand.style.left = (rect.left + rect.width / 2 - 18) + 'px';
-      hand.style.top = (rect.top + rect.height / 2 - 18) + 'px';
-      hand.classList.add('visible');
-    }
-  }
-
-  function hideHint() {
-    document.getElementById('hint-hand').classList.remove('visible');
-  }
-
-  function resetHintTimer() {
+  // 处理色号按钮点击
+  function handleColorBtnClick(colorIdx) {
+    if (!hasUnfilledBlocks(colorIdx)) return;
+    
+    selectedColor = colorIdx;
+    playPop();
+    
+    // 更新按钮状态
+    document.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('active'));
+    const btn = document.querySelector(`.color-btn[data-block="${colorIdx}"]`);
+    if (btn) btn.classList.add('active');
+    
+    // 高亮该色号的区域
+    highlightColorBlocks(colorIdx);
+    
+    // 隐藏提示手，显示指向区域的提示
     hideHint();
-    if (hintTimer) clearTimeout(hintTimer);
-    hintTimer = setTimeout(showHint, 4000);
+    setTimeout(() => showHintToArea(colorIdx), 300);
   }
 
+  // 处理SVG路径点击
   function handlePathClick(e) {
     const target = e.target.closest('path');
     if (!target) return;
@@ -299,8 +381,22 @@ function openStore() {
     const blockIdx = parseInt(target.dataset.block);
     if (filledBlocks.has(blockIdx)) return;
 
-    playPop();
-    fillBlock(blockIdx);
+    // 如果没有选中色号，检查是否是高亮区域
+    if (selectedColor < 0) {
+      // 自动选中该区域对应的色号
+      const colorIdx = pathColors[idx];
+      if (hasUnfilledBlocks(colorIdx)) {
+        handleColorBtnClick(colorIdx);
+      }
+      return;
+    }
+
+    // 检查点击的区域是否匹配当前选中的色号
+    const clickedColor = pathColors[idx];
+    if (clickedColor === selectedColor) {
+      playPop();
+      fillBlock(blockIdx);
+    }
   }
 
   function startGame() {
@@ -308,9 +404,12 @@ function openStore() {
     loadingScreen.classList.add('hidden');
     setTimeout(() => { loadingScreen.style.display = 'none'; }, 500);
     gameStarted = true;
-    currentBlockIdx = findNextBlock();
-    highlightCurrentBlock();
-    resetHintTimer();
+    
+    // 初始提示：指向第一个色号
+    const firstColor = getNextColorIdx();
+    if (firstColor >= 0) {
+      setTimeout(() => showHintToPalette(firstColor), 500);
+    }
   }
 
   function init() {
@@ -343,8 +442,15 @@ function openStore() {
       this.textContent = soundEnabled ? '🔊' : '🔇';
     });
 
+    // 绑定色号按钮点击事件
+    document.querySelectorAll('.color-btn').forEach(btn => {
+      const colorIdx = parseInt(btn.dataset.block);
+      btn.addEventListener('click', () => handleColorBtnClick(colorIdx));
+    });
+
+    // 初始状态：所有路径为白色
     document.querySelectorAll('#svg-area svg path').forEach(p => {
-      p.style.fill = '#e8e8e8';
+      p.style.fill = '#ffffff';
     });
   }
 
